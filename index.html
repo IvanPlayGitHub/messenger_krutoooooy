@@ -71,17 +71,16 @@
             padding: 6px 12px; font-size: 14px; font-weight: bold;
             pointer-events: none; z-index: 10000;
             opacity: 0;
-            /* Изначально чуть выше (чтобы выезжать вниз) и по центру */
             transform: translateY(-10px) translateX(-50%); 
             transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
             max-width: 250px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); word-wrap: break-word;
         }
         .custom-tooltip.show { opacity: 1; transform: translateY(0) translateX(-50%); }
 
-        /* Стрелочка ТЕПЕРЬ СВЕРХУ и смотрит ВВЕРХ */
+        /* Стрелочка сверху и смотрит вверх */
         .custom-tooltip::after {
             content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
-            border-width: 0 8px 8px 8px; /* Треугольник вверх */
+            border-width: 0 8px 8px 8px; 
             border-style: solid; border-color: transparent transparent black transparent;
         }
         .custom-tooltip::before {
@@ -134,8 +133,6 @@
         body.dark-mode .physical-switch.active .switch-block { background-color: white; }
         body.dark-mode .participant-avatar { background-color: #333; color: white; border-color: white; }
         body.dark-mode .participant-more { background-color: #1a1a1a; color: white; border-color: white; }
-        
-        /* Темная тема для подсказки снизу */
         body.dark-mode .custom-tooltip { background-color: #333; color: white; border-color: white; }
         body.dark-mode .custom-tooltip::after { border-color: transparent transparent white transparent; }
         body.dark-mode .custom-tooltip::before { border-color: transparent transparent #333 transparent; }
@@ -228,8 +225,10 @@
             if (supabaseUrl && supabaseKey) supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
         } catch (e) { console.error("Ошибка подключения Supabase:", e); }
 
-        let chats = [];
-        let activeChatId = null;
+        // --- ЗАГРУЗКА СОХРАНЕННЫХ ДАННЫХ ---
+        let chats = JSON.parse(localStorage.getItem('mySavedChats')) || [];
+        let activeChatId = localStorage.getItem('myActiveChatId') || null;
+        
         let currentChannel = null;
         let currentParticipants = new Set(); 
         const nameWords = ["бобик", "пупочек", "чебурек", "квантовый-огурец", "турбо-пельмень", "кринж-мастер"];
@@ -256,31 +255,30 @@
         const confirmCreateBtn = document.getElementById('confirmCreateBtn');
         const themeToggle = document.getElementById('themeToggle');
 
-        // --- ЛОГИКА ПОДСКАЗКИ (СНИЗУ) ---
+        // --- ФУНКЦИЯ СОХРАНЕНИЯ ---
+        function saveState() {
+            localStorage.setItem('mySavedChats', JSON.stringify(chats));
+            if (activeChatId) {
+                localStorage.setItem('myActiveChatId', activeChatId);
+            } else {
+                localStorage.removeItem('myActiveChatId');
+            }
+        }
+
+        // --- ЛОГИКА ПОДСКАЗКИ ---
         function showTooltip(element, text) {
             tooltip.textContent = text;
             const rect = element.getBoundingClientRect();
-            
-            // Ставим по центру элемента по горизонтали
             tooltip.style.left = `${rect.left + rect.width / 2}px`;
-            
-            // Ставим СНИЗУ. rect.bottom - это нижняя граница аватарки. 
-            // Прибавляем 12px для отступа (чтобы стрелочка не наезжала на рамку)
             tooltip.style.top = `${rect.bottom + 12}px`;
-            
             tooltip.classList.add('show');
         }
 
-        function hideTooltip() {
-            tooltip.classList.remove('show');
-        }
+        function hideTooltip() { tooltip.classList.remove('show'); }
 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.participant-avatar') && !e.target.closest('.participant-more')) {
-                hideTooltip();
-            }
+            if (!e.target.closest('.participant-avatar') && !e.target.closest('.participant-more')) hideTooltip();
         });
-        
         messagesContainer.addEventListener('scroll', hideTooltip);
         window.addEventListener('resize', hideTooltip);
 
@@ -324,7 +322,10 @@
         confirmCreateBtn.addEventListener('click', () => {
             const chatName = newChatNameInput.value.trim();
             if (chatName !== '') {
-                if (!chats.find(c => c.id === chatName)) chats.push({ id: chatName, name: chatName });
+                if (!chats.find(c => c.id === chatName)) {
+                    chats.push({ id: chatName, name: chatName });
+                    saveState(); // СОХРАНЯЕМ ПРИ СОЗДАНИИ
+                }
                 closeModal();
                 selectChat(chatName);
             } else { alert("Введите название комнаты."); }
@@ -372,6 +373,8 @@
 
         function selectChat(id) {
             activeChatId = id;
+            saveState(); // СОХРАНЯЕМ АКТИВНЫЙ ЧАТ
+            
             const currentChat = chats.find(c => c.id === id);
             if (currentChat) { chatTitleDisplay.textContent = currentChat.name; }
             
@@ -387,12 +390,15 @@
 
         window.deleteChat = function(id) {
             chats = chats.filter(chat => chat.id !== id);
+            
             if (activeChatId === id) {
                 activeChatId = null;
                 currentParticipants.clear();
                 renderParticipantsList();
                 if (currentChannel) supabaseClient.removeChannel(currentChannel);
             }
+            saveState(); // СОХРАНЯЕМ ПОСЛЕ УДАЛЕНИЯ
+            
             renderChats(); 
             updateRightPanel();
             if (activeChatId === null) messagesContainer.innerHTML = '';
@@ -422,7 +428,6 @@
                     e.stopPropagation(); 
                     showTooltip(avatar, username);
                 });
-
                 participantsContainer.appendChild(avatar);
             });
 
@@ -438,7 +443,6 @@
                     e.stopPropagation();
                     showTooltip(more, fullList);
                 });
-
                 participantsContainer.appendChild(more);
             }
         }
@@ -502,9 +506,18 @@
         sendBtn.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
+        // --- ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
         initUsername();
         renderChats();
-        updateRightPanel();
+        
+        // Проверяем, есть ли сохраненный активный чат в списке чатов
+        if (activeChatId && chats.find(c => c.id === activeChatId)) {
+            selectChat(activeChatId); // Автоматически открываем его
+        } else {
+            activeChatId = null;
+            saveState();
+            updateRightPanel();
+        }
     </script>
 </body>
 </html>
