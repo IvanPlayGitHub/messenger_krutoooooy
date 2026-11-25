@@ -47,51 +47,48 @@
         .chat-header { padding: 10px 15px; border-bottom: 3px solid black; display: flex; align-items: center; gap: 15px; background: #fdfdfd; min-height: 60px; transition: background 0.3s, border-color 0.3s; }
         .mobile-chats-btn { display: none; padding: 8px 15px; background: white; border: 3px solid black; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; transition: transform 0.2s var(--ease-bounce), background 0.3s, border-color 0.3s, color 0.3s; }
         .mobile-chats-btn:active { transform: scale(0.9); }
-        .chat-title { font-weight: bold; font-size: 18px; }
+        
+        .chat-title { font-weight: bold; font-size: 18px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; }
         
         /* --- БЛОК УЧАСТНИКОВ --- */
-        .participants-container {
-            margin-left: auto; /* Прижимаем вправо */
-            display: flex;
-            flex-direction: row-reverse; /* Чтобы новые участники были слева (визуально ближе к центру) */
-            gap: 5px;
-            align-items: center;
-        }
+        .participants-container { display: flex; flex-direction: row-reverse; gap: 5px; align-items: center; flex-shrink: 0; }
 
-        .participant-avatar {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            border: 3px solid black;
-            background-color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 14px;
-            font-weight: bold;
-            color: black;
-            cursor: default;
-            transition: transform 0.2s var(--ease-bounce), border-color 0.3s;
-            position: relative;
+        .participant-avatar, .participant-more {
+            width: 34px; height: 34px; border-radius: 50%; border: 3px solid black; 
+            display: flex; justify-content: center; align-items: center; 
+            font-size: 14px; font-weight: bold; color: black;
+            cursor: pointer; transition: transform 0.2s var(--ease-bounce), border-color 0.3s; 
+            position: relative; z-index: 1; user-select: none; -webkit-user-select: none;
         }
-        .participant-avatar:hover {
-            transform: translateY(-3px);
-            z-index: 10;
-        }
+        .participant-avatar { background-color: #fff; }
+        .participant-more { background-color: #e0e0e0; font-size: 12px; }
+        .participant-avatar:hover, .participant-more:hover { transform: translateY(-3px); z-index: 10; }
 
-        .participant-more {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            border: 3px solid black;
-            background-color: #e0e0e0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 12px;
-            font-weight: bold;
-            color: black;
-            transition: border-color 0.3s, background 0.3s;
+        /* --- КАСТОМНАЯ ПОДСКАЗКА (СНИЗУ) --- */
+        .custom-tooltip {
+            position: fixed; 
+            background: white; color: black; border: 3px solid black; border-radius: 10px;
+            padding: 6px 12px; font-size: 14px; font-weight: bold;
+            pointer-events: none; z-index: 10000;
+            opacity: 0;
+            /* Изначально чуть выше (чтобы выезжать вниз) и по центру */
+            transform: translateY(-10px) translateX(-50%); 
+            transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+            max-width: 250px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); word-wrap: break-word;
+        }
+        .custom-tooltip.show { opacity: 1; transform: translateY(0) translateX(-50%); }
+
+        /* Стрелочка ТЕПЕРЬ СВЕРХУ и смотрит ВВЕРХ */
+        .custom-tooltip::after {
+            content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+            border-width: 0 8px 8px 8px; /* Треугольник вверх */
+            border-style: solid; border-color: transparent transparent black transparent;
+        }
+        .custom-tooltip::before {
+            content: ''; position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+            border-width: 0 6px 6px 6px; 
+            border-style: solid; border-color: transparent transparent white transparent;
+            z-index: 1;
         }
 
         .empty-state { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: #555; text-align: center; padding: 20px; transition: color 0.3s; }
@@ -135,10 +132,13 @@
         body.dark-mode .physical-switch, body.dark-mode .switch-inner { background-color: #000000; border-color: white; }
         body.dark-mode .switch-block { background-color: #333333; border-color: white; }
         body.dark-mode .physical-switch.active .switch-block { background-color: white; }
-        
-        /* Темная тема для участников */
         body.dark-mode .participant-avatar { background-color: #333; color: white; border-color: white; }
         body.dark-mode .participant-more { background-color: #1a1a1a; color: white; border-color: white; }
+        
+        /* Темная тема для подсказки снизу */
+        body.dark-mode .custom-tooltip { background-color: #333; color: white; border-color: white; }
+        body.dark-mode .custom-tooltip::after { border-color: transparent transparent white transparent; }
+        body.dark-mode .custom-tooltip::before { border-color: transparent transparent #333 transparent; }
 
         /* ========================================= */
         /* --- МОБИЛЬНАЯ АДАПТАЦИЯ --- */
@@ -157,7 +157,6 @@
             .sidebar-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
             .sidebar-overlay.active { opacity: 1; visibility: visible; } 
 
-            /* На мобилках делаем аватарки чуть меньше, чтобы не переполнять шапку */
             .participant-avatar, .participant-more { width: 28px; height: 28px; font-size: 12px; border-width: 2px; }
         }
     </style>
@@ -165,6 +164,7 @@
 <body>
 
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="custom-tooltip" id="tooltip"></div>
 
     <div class="app-container">
         <aside class="sidebar" id="sidebar">
@@ -193,8 +193,6 @@
             <div class="chat-header" id="chatHeader" style="display: none;">
                 <button class="mobile-chats-btn" id="mobileChatsBtn">Чаты</button>
                 <div class="chat-title" id="chatTitleDisplay">Название чата</div>
-                
-                <!-- Контейнер для участников -->
                 <div class="participants-container" id="participantsContainer"></div>
             </div>
 
@@ -227,15 +225,13 @@
         try {
             const supabaseUrl = window.MY_SUPABASE_URL;
             const supabaseKey = window.MY_SUPABASE_KEY;
-            if (supabaseUrl && supabaseKey) {
-                supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-            }
+            if (supabaseUrl && supabaseKey) supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
         } catch (e) { console.error("Ошибка подключения Supabase:", e); }
 
         let chats = [];
         let activeChatId = null;
         let currentChannel = null;
-        let currentParticipants = new Set(); // Храним уникальные ники участников текущего чата
+        let currentParticipants = new Set(); 
         const nameWords = ["бобик", "пупочек", "чебурек", "квантовый-огурец", "турбо-пельмень", "кринж-мастер"];
 
         const sidebar = document.getElementById('sidebar');
@@ -250,8 +246,8 @@
         const usernameInput = document.getElementById('usernameInput');
         const chatHeader = document.getElementById('chatHeader');
         const chatTitleDisplay = document.getElementById('chatTitleDisplay');
-        
-        const participantsContainer = document.getElementById('participantsContainer'); // Новый элемент
+        const participantsContainer = document.getElementById('participantsContainer');
+        const tooltip = document.getElementById('tooltip'); 
         
         const createChatBtn = document.getElementById('createChatBtn');
         const createChatModal = document.getElementById('createChatModal');
@@ -260,17 +256,41 @@
         const confirmCreateBtn = document.getElementById('confirmCreateBtn');
         const themeToggle = document.getElementById('themeToggle');
 
-        function toggleSidebar() {
-            sidebar.classList.toggle('open');
-            sidebarOverlay.classList.toggle('active');
+        // --- ЛОГИКА ПОДСКАЗКИ (СНИЗУ) ---
+        function showTooltip(element, text) {
+            tooltip.textContent = text;
+            const rect = element.getBoundingClientRect();
+            
+            // Ставим по центру элемента по горизонтали
+            tooltip.style.left = `${rect.left + rect.width / 2}px`;
+            
+            // Ставим СНИЗУ. rect.bottom - это нижняя граница аватарки. 
+            // Прибавляем 12px для отступа (чтобы стрелочка не наезжала на рамку)
+            tooltip.style.top = `${rect.bottom + 12}px`;
+            
+            tooltip.classList.add('show');
         }
 
+        function hideTooltip() {
+            tooltip.classList.remove('show');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.participant-avatar') && !e.target.closest('.participant-more')) {
+                hideTooltip();
+            }
+        });
+        
+        messagesContainer.addEventListener('scroll', hideTooltip);
+        window.addEventListener('resize', hideTooltip);
+
+        // --- ОСТАЛЬНАЯ ЛОГИКА ---
+
+        function toggleSidebar() { sidebar.classList.toggle('open'); sidebarOverlay.classList.toggle('active'); }
         mobileChatsBtn.addEventListener('click', toggleSidebar);
         sidebarOverlay.addEventListener('click', toggleSidebar);
 
-        function generateRandomUsername() {
-            return `${nameWords[Math.floor(Math.random() * nameWords.length)]}${Math.floor(Math.random() * 9999)}`;
-        }
+        function generateRandomUsername() { return `${nameWords[Math.floor(Math.random() * nameWords.length)]}${Math.floor(Math.random() * 9999)}`; }
 
         function initUsername() {
             const savedName = localStorage.getItem('myChatName');
@@ -284,7 +304,12 @@
         });
 
         usernameInput.addEventListener('change', () => {
-            localStorage.setItem('myChatName', usernameInput.value.trim());
+            const newName = usernameInput.value.trim();
+            if(newName) {
+                localStorage.setItem('myChatName', newName);
+                currentParticipants.add(newName);
+                renderParticipantsList();
+            }
         });
 
         createChatBtn.addEventListener('click', () => {
@@ -294,33 +319,20 @@
         });
 
         function closeModal() { createChatModal.classList.remove('active'); }
-
         cancelCreateBtn.addEventListener('click', closeModal);
 
         confirmCreateBtn.addEventListener('click', () => {
             const chatName = newChatNameInput.value.trim();
             if (chatName !== '') {
-                if (!chats.find(c => c.id === chatName)) {
-                    chats.push({ id: chatName, name: chatName });
-                }
+                if (!chats.find(c => c.id === chatName)) chats.push({ id: chatName, name: chatName });
                 closeModal();
                 selectChat(chatName);
-            } else {
-                alert("Введите название комнаты.");
-            }
+            } else { alert("Введите название комнаты."); }
         });
 
-        createChatModal.addEventListener('click', (e) => {
-            if (e.target === createChatModal) closeModal();
-        });
-
-        newChatNameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') confirmCreateBtn.click();
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && createChatModal.classList.contains('active')) closeModal();
-        });
+        createChatModal.addEventListener('click', (e) => { if (e.target === createChatModal) closeModal(); });
+        newChatNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') confirmCreateBtn.click(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && createChatModal.classList.contains('active')) closeModal(); });
 
         function updateRightPanel() {
             const isMobile = window.innerWidth <= 768;
@@ -328,6 +340,7 @@
                 emptyState.style.display = 'flex';
                 messagesContainer.style.display = 'none';
                 inputArea.style.display = 'none';
+                participantsContainer.innerHTML = ''; 
                 if (isMobile) {
                     chatHeader.style.display = 'flex';
                     chatTitleDisplay.textContent = '';
@@ -341,7 +354,6 @@
                 inputArea.style.display = 'flex';
             }
         }
-
         window.addEventListener('resize', updateRightPanel);
 
         function renderChats() {
@@ -363,8 +375,9 @@
             const currentChat = chats.find(c => c.id === id);
             if (currentChat) { chatTitleDisplay.textContent = currentChat.name; }
             
-            // Очищаем участников при переключении чата
             currentParticipants.clear();
+            const myName = usernameInput.value.trim();
+            if (myName) currentParticipants.add(myName);
             renderParticipantsList();
 
             renderChats(); 
@@ -385,12 +398,14 @@
             if (activeChatId === null) messagesContainer.innerHTML = '';
         }
 
-        // --- ОТРИСОВКА УЧАСТНИКОВ ---
         function renderParticipantsList() {
             participantsContainer.innerHTML = '';
-            const users = Array.from(currentParticipants);
-            
-            // Показываем максимум 3 аватарки, остальные прячем за +N
+            let users = Array.from(currentParticipants);
+            const myName = usernameInput.value.trim();
+
+            users = users.filter(u => u !== myName);
+            if (currentParticipants.has(myName)) users.unshift(myName);
+
             const maxVisible = 3;
             const visibleUsers = users.slice(0, maxVisible);
             const hiddenCount = users.length - maxVisible;
@@ -400,7 +415,14 @@
                 const avatar = document.createElement('div');
                 avatar.className = 'participant-avatar';
                 avatar.textContent = initial;
-                avatar.title = username; // Показываем полное имя при наведении
+                
+                avatar.addEventListener('mouseenter', () => showTooltip(avatar, username));
+                avatar.addEventListener('mouseleave', hideTooltip);
+                avatar.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    showTooltip(avatar, username);
+                });
+
                 participantsContainer.appendChild(avatar);
             });
 
@@ -408,7 +430,15 @@
                 const more = document.createElement('div');
                 more.className = 'participant-more';
                 more.textContent = `+${hiddenCount}`;
-                more.title = users.slice(maxVisible).join(', '); // Показываем остальных при наведении
+                const fullList = users.slice(maxVisible).join(', ');
+
+                more.addEventListener('mouseenter', () => showTooltip(more, fullList));
+                more.addEventListener('mouseleave', hideTooltip);
+                more.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showTooltip(more, fullList);
+                });
+
                 participantsContainer.appendChild(more);
             }
         }
@@ -418,31 +448,22 @@
             msgDiv.className = `message ${msg.username === usernameInput.value.trim() ? 'own' : ''}`;
             msgDiv.innerHTML = `<div class="message-sender">${msg.username}</div><div>${msg.text}</div>`;
             messagesContainer.appendChild(msgDiv);
-
-            // Если пришло сообщение от нового пользователя — обновляем список участников
-            if (!currentParticipants.has(msg.username)) {
-                currentParticipants.add(msg.username);
-                renderParticipantsList();
-            }
         }
 
         async function renderMessages() {
             messagesContainer.innerHTML = '';
-            currentParticipants.clear(); // Сбрасываем перед загрузкой
-            
             if (activeChatId === null || !supabaseClient) return;
             
             const { data, error } = await supabaseClient.from('messages').select('*').eq('chat_id', activeChatId.toString()).order('created_at', { ascending: true });
             
             if (error) { messagesContainer.innerHTML = `<div style="color:red;">Ошибка загрузки: ${error.message}</div>`; return; }
             
-            // Собираем уникальных участников из истории сообщений
             data.forEach(msg => {
                 currentParticipants.add(msg.username);
                 appendMessageToDOM(msg);
             });
             
-            renderParticipantsList(); // Отрисовываем аватарки
+            renderParticipantsList();
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
@@ -453,6 +474,10 @@
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${activeChatId}` }, 
                 (payload) => {
                     appendMessageToDOM(payload.new);
+                    if (!currentParticipants.has(payload.new.username)) {
+                        currentParticipants.add(payload.new.username);
+                        renderParticipantsList();
+                    }
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }).subscribe();
         }
