@@ -1,0 +1,3 @@
+// Файл config.js
+window.MY_SUPABASE_URL = 'https://ggoxzrelogsutiufjkre.supabase.co';
+window.MY_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdnb3h6cmVsb2dzdXRpdWZqa3JlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU2MTgwOTcsImV4cCI6MjExMTE5NDA5N30.5tWB60zk8ksBp4mDGYidJDb5aa5W9gg0rAdhAjghVGs';
