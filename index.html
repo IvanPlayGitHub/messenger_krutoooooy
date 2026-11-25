@@ -5,49 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Мессенджер по скетчу</title>
     <style>
-        /* ... ВСЕ СТИЛИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ (я их скрыл для краткости, но они на месте) ... */
         * { box-sizing: border-box; font-family: 'Comic Sans MS', 'Arial', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; padding: 20px; background-color: #f4f4f4; height: 100vh; display: flex; justify-content: center; transition: background-color 0.3s, color 0.3s; overflow: hidden; }
         .app-container { display: flex; width: 100%; max-width: 1200px; height: 100%; gap: 10px; position: relative; }
-        .sidebar { width: 300px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.3s ease-in-out; z-index: 100; }
+        
+        /* --- ЛЕВАЯ ПАНЕЛЬ (МЕНЮ) --- */
+        .sidebar { 
+            width: 300px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            transition: transform 0.3s ease-in-out; 
+            z-index: 100; 
+            background-color: #f4f4f4; /* Фон для мобильной выезжающей панели */
+        }
+        
         .create-chat-btn { padding: 15px; font-size: 16px; background: white; border: 3px solid black; border-radius: 15px; cursor: pointer; font-weight: bold; transition: transform 0.1s, background 0.3s, border-color 0.3s, color 0.3s; }
         .create-chat-btn:active { transform: scale(0.98); }
+        
         .chat-list-container { flex: 1; border: 3px solid black; border-radius: 15px; padding: 10px; background: white; display: flex; flex-direction: column; overflow: hidden; transition: background 0.3s, border-color 0.3s; }
         .chat-list-header { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 5px; }
         .chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; }
         .chat-list::-webkit-scrollbar { width: 8px; } .chat-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; } .chat-list::-webkit-scrollbar-thumb { background: black; border-radius: 10px; }
+        
         .chat-item { padding: 12px; border: 2px solid black; border-radius: 12px; cursor: pointer; background: white; transition: background 0.2s, border-color 0.3s, color 0.3s; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .chat-item:hover { background: #e0e0e0; } .chat-item.active { background: #d0e8ff; border-width: 3px; }
         .chat-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .delete-chat-btn { font-size: 18px; font-weight: bold; color: black; cursor: pointer; padding: 0 5px; border-radius: 50%; line-height: 1; transition: color 0.2s, background 0.2s; }
         .delete-chat-btn:hover { color: red; background-color: #ffcccc; }
+        
         .sidebar-footer { border: 3px solid black; border-radius: 15px; background: white; padding: 15px; display: flex; flex-direction: column; gap: 15px; transition: background 0.3s, border-color 0.3s; }
         .username-container { display: flex; flex-direction: column; gap: 5px; }
-        .username-container input { padding: 10px; border: 3px solid black; border-radius: 10px; background: white; font-size: 16px; outline: none; }
+        .username-container input { padding: 10px; border: 3px solid black; border-radius: 10px; background: white; font-size: 16px; outline: none; transition: background 0.3s, border-color 0.3s, color 0.3s; }
         .switch-row { display: flex; justify-content: space-between; align-items: center; }
+        
         .physical-switch { width: 55px; height: 55px; border: 4px solid black; padding: 3px; background: white; cursor: pointer; transition: background 0.3s, border-color 0.3s; }
-        .switch-inner { width: 100%; height: 100%; border: 4px solid black; background: white; position: relative; overflow: hidden; }
-        .switch-block { position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: #d3d3d3; border-top: 3px solid black; transition: transform 0.2s ease-in-out, background 0.2s; }
+        .switch-inner { width: 100%; height: 100%; border: 4px solid black; background: white; position: relative; overflow: hidden; transition: background 0.3s, border-color 0.3s; }
+        .switch-block { position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: #d3d3d3; border-top: 3px solid black; transition: transform 0.2s ease-in-out, background 0.2s, border-color 0.3s; }
         .physical-switch.active .switch-block { transform: translateY(-100%); border-top: none; border-bottom: 3px solid black; background: #333; }
+
+        /* --- ПРАВАЯ ПАНЕЛЬ (ЧАТ) --- */
         .chat-area { flex: 1; border: 3px solid black; border-radius: 15px; background: white; display: flex; flex-direction: column; position: relative; overflow: hidden; transition: background 0.3s, border-color 0.3s; }
-        .chat-header { padding: 10px 15px; border-bottom: 3px solid black; display: flex; justify-content: space-between; align-items: center; background: #fdfdfd; min-height: 60px; }
-        .mobile-chats-btn { display: none; padding: 8px 15px; background: white; border: 3px solid black; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .chat-header { padding: 10px 15px; border-bottom: 3px solid black; display: flex; align-items: center; gap: 15px; background: #fdfdfd; min-height: 60px; transition: background 0.3s, border-color 0.3s; }
+        
+        .mobile-chats-btn { display: none; padding: 8px 15px; background: white; border: 3px solid black; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; transition: background 0.3s, border-color 0.3s, color 0.3s; }
         .chat-title { font-weight: bold; font-size: 18px; }
-        .empty-state { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: #555; text-align: center; padding: 20px; }
+        
+        .empty-state { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: #555; text-align: center; padding: 20px; transition: color 0.3s; }
         .messages-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .message { max-width: 70%; padding: 10px 15px; border: 2px solid black; border-radius: 15px; font-size: 16px; background: white; align-self: flex-start; display: flex; flex-direction: column; word-break: break-word; }
+        
+        .message { max-width: 70%; padding: 10px 15px; border: 2px solid black; border-radius: 15px; font-size: 16px; background: white; align-self: flex-start; display: flex; flex-direction: column; word-break: break-word; transition: background 0.3s, border-color 0.3s, color 0.3s; }
         .message.own { align-self: flex-end; background: #e0f7fa; }
         .message-sender { font-size: 12px; font-weight: bold; color: #666; margin-bottom: 3px; }
         .message.own .message-sender { text-align: right; color: #00796b; }
+        
         .input-area { display: flex; padding: 10px; gap: 10px; border-top: 2px solid transparent; }
-        .input-area input { flex: 1; padding: 15px; border: 3px solid black; border-radius: 15px; font-size: 16px; outline: none; width: 100%; }
-        .input-area button { padding: 0 20px; border: 3px solid black; border-radius: 15px; background: white; font-weight: bold; cursor: pointer; font-size: 18px; }
+        .input-area input { flex: 1; padding: 15px; border: 3px solid black; border-radius: 15px; font-size: 16px; outline: none; width: 100%; transition: background 0.3s, border-color 0.3s, color 0.3s; }
+        .input-area button { padding: 0 20px; border: 3px solid black; border-radius: 15px; background: white; font-weight: bold; cursor: pointer; font-size: 18px; transition: background 0.3s, border-color 0.3s, color 0.3s; }
+
+        /* --- МОДАЛЬНОЕ ОКНО --- */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 20px; border: 3px solid black; border-radius: 15px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; }
         .modal-content input { padding: 12px; border: 3px solid black; border-radius: 10px; font-size: 16px; outline: none; }
         .modal-actions { display: flex; gap: 10px; }
         .modal-actions button { flex: 1; padding: 10px; border: 3px solid black; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; background: white; }
+
+        /* --- ТЁМНАЯ ТЕМА --- */
         body.dark-mode { background-color: #000000; color: white; }
+        body.dark-mode .sidebar { background-color: #000000; }
         body.dark-mode .create-chat-btn, body.dark-mode .chat-list-container, body.dark-mode .chat-item, body.dark-mode .sidebar-footer, body.dark-mode .username-container input, body.dark-mode .chat-header, body.dark-mode .chat-area, body.dark-mode .input-area input, body.dark-mode .input-area button, body.dark-mode .modal-content, body.dark-mode .modal-content input, body.dark-mode .modal-actions button, body.dark-mode .mobile-chats-btn { background-color: #1a1a1a; color: white; border-color: white; }
         body.dark-mode .message { background-color: #2a2a2a; color: white; border-color: white; }
         body.dark-mode .message.own { background-color: #004d40; border-color: white; }
@@ -58,28 +83,49 @@
         body.dark-mode .physical-switch, body.dark-mode .switch-inner { background-color: #000000; border-color: white; }
         body.dark-mode .switch-block { background-color: #333333; border-color: white; }
         body.dark-mode .physical-switch.active .switch-block { background-color: white; }
+
+        /* ========================================= */
+        /* --- МОБИЛЬНАЯ АДАПТАЦИЯ --- */
+        /* ========================================= */
         @media (max-width: 768px) {
-            body { padding: 0; } .app-container { height: 100dvh; gap: 0; }
-            .sidebar { position: fixed; top: 0; left: -100%; width: 85%; max-width: 320px; height: 100dvh; background: #f4f4f4; padding: 10px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); }
-            .sidebar.open { left: 0; } .chat-area { border-radius: 0; border: none; border-left: 3px solid black; width: 100%; }
-            .mobile-chats-btn { display: block; } .chat-header { justify-content: flex-start; gap: 15px; } .message { max-width: 85%; }
+            body { padding: 0; } 
+            .app-container { height: 100dvh; gap: 0; }
+            
+            /* Выезжающая панель */
+            .sidebar { position: fixed; top: 0; left: -100%; width: 85%; max-width: 320px; height: 100dvh; padding: 10px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); overflow-y: auto; }
+            .sidebar.open { left: 0; } 
+            
+            /* Чат на весь экран */
+            .chat-area { border-radius: 0; border: none; border-left: 3px solid black; width: 100%; }
+            body.dark-mode .chat-area { border-left-color: white; }
+            
+            /* Показываем кнопку "Чаты" и делаем шапку видимой всегда */
+            .mobile-chats-btn { display: block; } 
+            .chat-header { justify-content: flex-start; } 
+            .message { max-width: 85%; }
             .input-area { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+            
+            /* Затемнение фона при открытом меню */
             .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99; }
-            .sidebar-overlay.active { display: block; } body.dark-mode .sidebar { background: #000; border-right: 3px solid white; }
+            .sidebar-overlay.active { display: block; } 
         }
     </style>
 </head>
 <body>
 
+    <!-- Затемнение фона для мобильных -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <div class="app-container">
+        <!-- Левая панель (Меню) -->
         <aside class="sidebar" id="sidebar">
             <button class="create-chat-btn" id="createChatBtn">создать / войти</button>
+            
             <div class="chat-list-container">
                 <div class="chat-list-header">Чаты</div>
                 <div class="chat-list" id="chatList"></div>
             </div>
+
             <div class="sidebar-footer">
                 <div class="username-container">
                     <label>Ваш ник:</label>
@@ -94,13 +140,18 @@
             </div>
         </aside>
 
+        <!-- Правая панель (Чат) -->
         <main class="chat-area">
-            <div id="emptyState" class="empty-state">Не открыт ни один из чатов</div>
+            <!-- Шапка теперь ВСЕГДА видна на мобилках, даже если чат не открыт -->
             <div class="chat-header" id="chatHeader" style="display: none;">
                 <button class="mobile-chats-btn" id="mobileChatsBtn">Чаты</button>
                 <div class="chat-title" id="chatTitleDisplay">Название чата</div>
             </div>
+
+            <div id="emptyState" class="empty-state">Не открыт ни один из чатов</div>
+            
             <div class="messages-container" id="messagesContainer" style="display: none;"></div>
+
             <div class="input-area" id="inputArea" style="display: none;">
                 <input type="text" id="messageInput" placeholder="Написать сообщение..." autocomplete="off">
                 <button id="sendBtn">></button>
@@ -108,6 +159,7 @@
         </main>
     </div>
 
+    <!-- Модальное окно -->
     <div class="modal-overlay" id="createChatModal">
         <div class="modal-content">
             <h3 style="margin:0; text-align:center;">Создать или войти в чат</h3>
@@ -119,35 +171,26 @@
         </div>
     </div>
 
-    <!-- 1. Подключаем твой файл с ключами -->
+    <!-- Скрипт с твоими ключами -->
     <script src="config.js"></script>
-    
-    <!-- 2. Подключаем библиотеку Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-        // ==========================================
-        // 3. БЕРЕМ КЛЮЧИ ИЗ CONFIG.JS
-        // ==========================================
         let supabaseClient = null;
         try {
-            // Берем переменные из файла config.js, который мы создали
             const supabaseUrl = window.MY_SUPABASE_URL;
             const supabaseKey = window.MY_SUPABASE_KEY;
-            
             if (supabaseUrl && supabaseKey) {
                 supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-            } else {
-                console.warn("ВНИМАНИЕ: Не удалось найти ключи. Проверь файл config.js");
             }
         } catch (e) { console.error("Ошибка подключения Supabase:", e); }
 
-        // ... ДАЛЬШЕ ИДЕТ ВЕСЬ ОСТАЛЬНОЙ JS КОД БЕЗ ИЗМЕНЕНИЙ ...
         let chats = [];
         let activeChatId = null;
         let currentChannel = null;
         const nameWords = ["бобик", "пупочек", "чебурек", "квантовый-огурец", "турбо-пельмень", "кринж-мастер"];
 
+        // Элементы
         const sidebar = document.getElementById('sidebar');
         const sidebarOverlay = document.getElementById('sidebarOverlay');
         const mobileChatsBtn = document.getElementById('mobileChatsBtn');
@@ -169,6 +212,7 @@
         const confirmCreateBtn = document.getElementById('confirmCreateBtn');
         const themeToggle = document.getElementById('themeToggle');
 
+        // Управление мобильным меню
         function toggleSidebar() {
             sidebar.classList.toggle('open');
             sidebarOverlay.classList.toggle('active');
@@ -223,15 +267,32 @@
             if (e.key === 'Enter') confirmCreateBtn.click();
         });
 
+        // Обновление интерфейса
         function updateRightPanel() {
+            const isMobile = window.innerWidth <= 768;
+
             if (activeChatId === null) {
-                emptyState.style.display = 'flex'; chatHeader.style.display = 'none';
-                messagesContainer.style.display = 'none'; inputArea.style.display = 'none';
+                emptyState.style.display = 'flex';
+                messagesContainer.style.display = 'none';
+                inputArea.style.display = 'none';
+                
+                // На мобилках шапку НЕ прячем, чтобы была доступна кнопка "Чаты"
+                if (isMobile) {
+                    chatHeader.style.display = 'flex';
+                    chatTitleDisplay.textContent = ''; // Очищаем название, так как чат не выбран
+                } else {
+                    chatHeader.style.display = 'none';
+                }
             } else {
-                emptyState.style.display = 'none'; chatHeader.style.display = 'flex';
-                messagesContainer.style.display = 'flex'; inputArea.style.display = 'flex';
+                emptyState.style.display = 'none';
+                chatHeader.style.display = 'flex';
+                messagesContainer.style.display = 'flex';
+                inputArea.style.display = 'flex';
             }
         }
+
+        // При изменении размера окна обновляем панель (на случай поворота телефона)
+        window.addEventListener('resize', updateRightPanel);
 
         function renderChats() {
             chatListEl.innerHTML = '';
@@ -241,7 +302,7 @@
                 div.innerHTML = `<span class="chat-name">${chat.name}</span><span class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${chat.id}')">✕</span>`;
                 div.onclick = () => {
                     selectChat(chat.id);
-                    if(window.innerWidth <= 768) toggleSidebar();
+                    if(window.innerWidth <= 768) toggleSidebar(); // Закрываем меню на мобилке
                 };
                 chatListEl.appendChild(div);
             });
@@ -250,9 +311,15 @@
         function selectChat(id) {
             activeChatId = id;
             const currentChat = chats.find(c => c.id === id);
-            if (currentChat) { chatTitleDisplay.textContent = currentChat.name; }
-            renderChats(); updateRightPanel();
-            if (supabaseClient) { renderMessages(); setupRealtime(); }
+            if (currentChat) { 
+                chatTitleDisplay.textContent = currentChat.name; 
+            }
+            renderChats(); 
+            updateRightPanel();
+            if (supabaseClient) { 
+                renderMessages(); 
+                setupRealtime(); 
+            }
         }
 
         window.deleteChat = function(id) {
@@ -261,7 +328,8 @@
                 activeChatId = null;
                 if (currentChannel) supabaseClient.removeChannel(currentChannel);
             }
-            renderChats(); updateRightPanel();
+            renderChats(); 
+            updateRightPanel();
             if (activeChatId === null) messagesContainer.innerHTML = '';
         }
 
@@ -276,7 +344,10 @@
             messagesContainer.innerHTML = '';
             if (activeChatId === null || !supabaseClient) return;
             const { data, error } = await supabaseClient.from('messages').select('*').eq('chat_id', activeChatId.toString()).order('created_at', { ascending: true });
-            if (error) { messagesContainer.innerHTML = `<div style="color:red;">Ошибка загрузки: ${error.message}</div>`; return; }
+            if (error) { 
+                messagesContainer.innerHTML = `<div style="color:red;">Ошибка загрузки: ${error.message}</div>`; 
+                return; 
+            }
             data.forEach(msg => appendMessageToDOM(msg));
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
@@ -311,6 +382,7 @@
         sendBtn.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
+        // Запуск
         initUsername();
         renderChats();
         updateRightPanel();
