@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
+<!-- Твой звуковой файл -->
+<audio id="notificationSound" src="уведомление.mp3" preload="auto"></audio>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -225,6 +227,32 @@
             if (supabaseUrl && supabaseKey) supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
         } catch (e) { console.error("Ошибка подключения Supabase:", e); }
 
+        // --- ЗВУКОВОЕ УВЕДОМЛЕНИЕ (СВОЙ ЗВУК) ---
+        const notificationSound = document.getElementById('notificationSound');
+
+        // Браузеры блокируют звук, пока пользователь не кликнет по сайту.
+        // Этот блок "разблокирует" звук при первом же клике.
+        document.addEventListener('click', () => {
+            if (notificationSound) {
+                notificationSound.volume = 0; // Делаем беззвучным
+                notificationSound.play().then(() => {
+                    notificationSound.pause();
+                    notificationSound.currentTime = 0;
+                    notificationSound.volume = 1; // Возвращаем громкость
+                }).catch(() => {});
+            }
+        }, { once: true });
+
+        function playNotificationSound() {
+            if (!notificationSound) return;
+            try {
+                notificationSound.currentTime = 0; // Отматываем в начало (если звук уже играл)
+                notificationSound.play().catch(e => console.warn("Браузер заблокировал звук", e));
+            } catch (e) {
+                console.warn("Не удалось воспроизвести звук", e);
+            }
+        }
+
         // --- ЗАГРУЗКА СОХРАНЕННЫХ ДАННЫХ ---
         let chats = JSON.parse(localStorage.getItem('mySavedChats')) || [];
         let activeChatId = localStorage.getItem('myActiveChatId') || null;
@@ -255,7 +283,6 @@
         const confirmCreateBtn = document.getElementById('confirmCreateBtn');
         const themeToggle = document.getElementById('themeToggle');
 
-        // --- ФУНКЦИЯ СОХРАНЕНИЯ ---
         function saveState() {
             localStorage.setItem('mySavedChats', JSON.stringify(chats));
             if (activeChatId) {
@@ -283,7 +310,6 @@
         window.addEventListener('resize', hideTooltip);
 
         // --- ОСТАЛЬНАЯ ЛОГИКА ---
-
         function toggleSidebar() { sidebar.classList.toggle('open'); sidebarOverlay.classList.toggle('active'); }
         mobileChatsBtn.addEventListener('click', toggleSidebar);
         sidebarOverlay.addEventListener('click', toggleSidebar);
@@ -324,7 +350,7 @@
             if (chatName !== '') {
                 if (!chats.find(c => c.id === chatName)) {
                     chats.push({ id: chatName, name: chatName });
-                    saveState(); // СОХРАНЯЕМ ПРИ СОЗДАНИИ
+                    saveState(); 
                 }
                 closeModal();
                 selectChat(chatName);
@@ -373,7 +399,7 @@
 
         function selectChat(id) {
             activeChatId = id;
-            saveState(); // СОХРАНЯЕМ АКТИВНЫЙ ЧАТ
+            saveState(); 
             
             const currentChat = chats.find(c => c.id === id);
             if (currentChat) { chatTitleDisplay.textContent = currentChat.name; }
@@ -397,7 +423,7 @@
                 renderParticipantsList();
                 if (currentChannel) supabaseClient.removeChannel(currentChannel);
             }
-            saveState(); // СОХРАНЯЕМ ПОСЛЕ УДАЛЕНИЯ
+            saveState(); 
             
             renderChats(); 
             updateRightPanel();
@@ -474,6 +500,7 @@
         function setupRealtime() {
             if (!supabaseClient) return;
             if (currentChannel) supabaseClient.removeChannel(currentChannel);
+            
             currentChannel = supabaseClient.channel('room_' + activeChatId)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${activeChatId}` }, 
                 (payload) => {
@@ -483,6 +510,11 @@
                         renderParticipantsList();
                     }
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                    // --- ПРОВЕРКА ДЛЯ ЗВУКА ---
+                    if (document.hidden && payload.new.username !== usernameInput.value.trim()) {
+                        playNotificationSound(); // Играем твой звук
+                    }
                 }).subscribe();
         }
 
@@ -506,13 +538,11 @@
         sendBtn.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-        // --- ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
         initUsername();
         renderChats();
         
-        // Проверяем, есть ли сохраненный активный чат в списке чатов
         if (activeChatId && chats.find(c => c.id === activeChatId)) {
-            selectChat(activeChatId); // Автоматически открываем его
+            selectChat(activeChatId);
         } else {
             activeChatId = null;
             saveState();
