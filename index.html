@@ -60,7 +60,7 @@
         .enable-notifications-btn {
             padding: 10px; background: #e0f7fa; border: 3px solid black; border-radius: 10px;
             font-weight: bold; cursor: pointer; transition: background 0.2s, transform 0.1s;
-            display: none; /* Скрыта, если уже включено */
+            display: none; /* Изначально скрыта */
         }
         .enable-notifications-btn:active { transform: scale(0.95); }
 
@@ -190,7 +190,6 @@
                     <input type="text" id="usernameInput" placeholder="Введите имя..." autocomplete="off">
                 </div>
                 
-                <!-- Кнопка запроса разрешения на системные уведомления -->
                 <button class="enable-notifications-btn" id="enableNotificationsBtn">Включить уведомления</button>
 
                 <div class="switch-row">
@@ -265,14 +264,18 @@
         // --- СИСТЕМНЫЕ УВЕДОМЛЕНИЯ (API БРАУЗЕРА) ---
         const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
         
-        // Проверяем, поддерживает ли браузер уведомления
+        // ИСПРАВЛЕНИЕ 1: Показываем кнопку, если разрешение еще не запрошено
         if (!("Notification" in window)) {
             enableNotificationsBtn.style.display = 'none';
         } else if (Notification.permission === "granted") {
-            enableNotificationsBtn.style.display = 'none'; // Уже включено
+            enableNotificationsBtn.style.display = 'none';
         } else if (Notification.permission === "denied") {
             enableNotificationsBtn.textContent = "Уведомления заблокированы";
             enableNotificationsBtn.disabled = true;
+            enableNotificationsBtn.style.display = 'block';
+        } else {
+            // Если статус "default", показываем кнопку!
+            enableNotificationsBtn.style.display = 'block';
         }
 
         enableNotificationsBtn.addEventListener('click', () => {
@@ -284,12 +287,11 @@
         });
 
         function showSystemNotification(title, body, chatId) {
-            if (Notification.permission === "granted" && document.hidden) {
+            if (Notification.permission === "granted" && !document.hasFocus()) {
                 const notification = new Notification(title, {
                     body: body,
-                    icon: 'https://cdn-icons-png.flaticon.com/512/5968/5968806.png' // Можно поставить свою иконку
+                    icon: 'https://cdn-icons-png.flaticon.com/512/5968/5968806.png'
                 });
-                // При клике на уведомление - фокусируем вкладку и открываем чат
                 notification.onclick = function() {
                     window.focus();
                     selectChat(chatId);
@@ -301,7 +303,7 @@
         // --- ЗАГРУЗКА ДАННЫХ ---
         let chats = JSON.parse(localStorage.getItem('mySavedChats')) || [];
         let activeChatId = localStorage.getItem('myActiveChatId') || null;
-        let unreadCounts = JSON.parse(localStorage.getItem('myUnreadCounts')) || {}; // Объект для непрочитанных
+        let unreadCounts = JSON.parse(localStorage.getItem('myUnreadCounts')) || {};
         
         let currentChannel = null;
         let currentParticipants = new Set(); 
@@ -339,20 +341,22 @@
             else localStorage.removeItem('myActiveChatId');
         }
 
-        // --- УПРАВЛЕНИЕ ЗАГОЛОВКОМ ВКЛАДКИ ---
+        // --- ИСПРАВЛЕНИЕ 2: УПРАВЛЕНИЕ ЗАГОЛОВКОМ ВКЛАДКИ ---
         const originalTitle = document.title;
         function updateTitle() {
             const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
-            if (totalUnread > 0 && document.hidden) {
+            // Используем !document.hasFocus() вместо document.hidden для надежности
+            if (totalUnread > 0 && !document.hasFocus()) {
                 document.title = `(${totalUnread}) Новое сообщение!`;
             } else {
                 document.title = originalTitle;
             }
         }
         
-        window.addEventListener('focus', () => {
-            document.title = originalTitle;
-        });
+        // Обновляем заголовок при переключении вкладок или окон
+        window.addEventListener('focus', updateTitle);
+        window.addEventListener('blur', updateTitle);
+        document.addEventListener('visibilitychange', updateTitle);
 
         // --- ЛОГИКА ПОДСКАЗКИ ---
         function showTooltip(element, text) {
@@ -471,7 +475,6 @@
                 const div = document.createElement('div');
                 div.className = `chat-item ${chat.id === activeChatId ? 'active' : ''}`;
                 
-                // Обертка для названия и бейджа
                 const nameWrapper = document.createElement('div');
                 nameWrapper.className = 'chat-name-wrapper';
                 
@@ -479,7 +482,6 @@
                 nameSpan.className = 'chat-name';
                 nameSpan.textContent = chat.name;
                 
-                // Бейдж непрочитанных
                 const badge = document.createElement('span');
                 badge.className = 'unread-badge';
                 if (unreadCounts[chat.id] > 0) {
@@ -524,7 +526,6 @@
         function selectChat(id) {
             activeChatId = id;
             
-            // Сбрасываем непрочитанные для этого чата
             unreadCounts[id] = 0;
             
             saveState(); 
@@ -545,7 +546,7 @@
 
         window.deleteChat = function(id) {
             chats = chats.filter(chat => chat.id !== id);
-            delete unreadCounts[id]; // Удаляем счетчик
+            delete unreadCounts[id];
             
             if (activeChatId === id) {
                 activeChatId = null;
@@ -627,12 +628,10 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // ГЛОБАЛЬНАЯ ПОДПИСКА НА ВСЕ СООБЩЕНИЯ
         function setupGlobalRealtime() {
             if (!supabaseClient) return;
             if (currentChannel) supabaseClient.removeChannel(currentChannel);
             
-            // Убираем фильтр chat_id, чтобы ловить сообщения из ВСЕХ чатов
             currentChannel = supabaseClient.channel('global_room')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, 
                 (payload) => {
@@ -640,7 +639,6 @@
                     const msgChatId = newMsg.chat_id;
                     const isMyMessage = newMsg.username === usernameInput.value.trim();
 
-                    // Если сообщение пришло в текущий открытый чат
                     if (msgChatId === activeChatId) {
                         appendMessageToDOM(newMsg);
                         if (!currentParticipants.has(newMsg.username)) {
@@ -648,18 +646,15 @@
                             renderParticipantsList();
                         }
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    } 
-                    // Если сообщение в ДРУГОЙ чат и не от нас самих
-                    else if (!isMyMessage) {
-                        // Увеличиваем счетчик непрочитанных
+                    } else if (!isMyMessage) {
                         unreadCounts[msgChatId] = (unreadCounts[msgChatId] || 0) + 1;
                         saveState();
                         renderChats();
                         updateTitle();
                     }
 
-                    // Уведомления (звук и пуш) только если вкладка скрыта и это не наше сообщение
-                    if (document.hidden && !isMyMessage) {
+                    // ИСПРАВЛЕНИЕ: Уведомления срабатывают, если фокуса нет
+                    if (!document.hasFocus() && !isMyMessage) {
                         playNotificationSound();
                         const chatName = chats.find(c => c.id === msgChatId)?.name || msgChatId;
                         showSystemNotification(`Новое сообщение в "${chatName}"`, `${newMsg.username}: ${newMsg.text}`, msgChatId);
@@ -699,7 +694,6 @@
             updateRightPanel();
         }
 
-        // Запускаем глобальный слушатель
         setupGlobalRealtime();
     </script>
 </body>
