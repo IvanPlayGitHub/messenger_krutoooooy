@@ -1,7 +1,5 @@
 <!DOCTYPE html>
 <html lang="ru">
-<!-- Твой звуковой файл -->
-<audio id="notificationSound" src="уведомление.mp3" preload="auto"></audio>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -27,10 +25,13 @@
         .chat-list-header { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 5px; }
         .chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; scroll-behavior: smooth; }
         .chat-list::-webkit-scrollbar { width: 8px; } .chat-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; } .chat-list::-webkit-scrollbar-thumb { background: black; border-radius: 10px; }
-        .chat-item { padding: 12px; border: 2px solid black; border-radius: 12px; cursor: pointer; background: white; display: flex; justify-content: space-between; align-items: center; gap: 10px; transition: transform 0.2s var(--ease-out), background 0.2s, border-color 0.3s, color 0.3s; }
-        .chat-item:hover { background: #e0e0e0; transform: translateX(4px); } .chat-item.active { background: #d0e8ff; border-width: 3px; transform: translateX(4px); }
-        .chat-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .delete-chat-btn { font-size: 18px; font-weight: bold; color: black; cursor: pointer; padding: 0 5px; border-radius: 50%; line-height: 1; transition: color 0.2s, background 0.2s, transform 0.2s; }
+        
+        .chat-item { padding: 12px; border: 2px solid black; border-radius: 12px; cursor: pointer; background: white; display: flex; justify-content: space-between; align-items: center; gap: 10px; transition: transform 0.2s var(--ease-out), background 0.2s, border-color 0.3s, color 0.3s; position: relative; }
+        .chat-item:hover { background: #e0e0e0; transform: translateX(4px); } 
+        .chat-item.active { background: #d0e8ff; border-width: 3px; transform: translateX(4px); }
+        
+        .chat-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+        .delete-chat-btn { font-size: 18px; font-weight: bold; color: black; cursor: pointer; padding: 0 5px; border-radius: 50%; line-height: 1; transition: color 0.2s, background 0.2s, transform 0.2s; user-select: none; }
         .delete-chat-btn:hover { color: red; background-color: #ffcccc; transform: rotate(90deg); }
         
         .sidebar-footer { border: 3px solid black; border-radius: 15px; background: white; padding: 15px; display: flex; flex-direction: column; gap: 15px; transition: background 0.3s, border-color 0.3s; }
@@ -49,12 +50,10 @@
         .chat-header { padding: 10px 15px; border-bottom: 3px solid black; display: flex; align-items: center; gap: 15px; background: #fdfdfd; min-height: 60px; transition: background 0.3s, border-color 0.3s; }
         .mobile-chats-btn { display: none; padding: 8px 15px; background: white; border: 3px solid black; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; transition: transform 0.2s var(--ease-bounce), background 0.3s, border-color 0.3s, color 0.3s; }
         .mobile-chats-btn:active { transform: scale(0.9); }
-        
         .chat-title { font-weight: bold; font-size: 18px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; }
         
         /* --- БЛОК УЧАСТНИКОВ --- */
         .participants-container { display: flex; flex-direction: row-reverse; gap: 5px; align-items: center; flex-shrink: 0; }
-
         .participant-avatar, .participant-more {
             width: 34px; height: 34px; border-radius: 50%; border: 3px solid black; 
             display: flex; justify-content: center; align-items: center; 
@@ -66,30 +65,45 @@
         .participant-more { background-color: #e0e0e0; font-size: 12px; }
         .participant-avatar:hover, .participant-more:hover { transform: translateY(-3px); z-index: 10; }
 
-        /* --- КАСТОМНАЯ ПОДСКАЗКА (СНИЗУ) --- */
+        /* --- КАСТОМНАЯ ПОДСКАЗКА --- */
         .custom-tooltip {
-            position: fixed; 
-            background: white; color: black; border: 3px solid black; border-radius: 10px;
+            position: fixed; background: white; color: black; border: 3px solid black; border-radius: 10px;
             padding: 6px 12px; font-size: 14px; font-weight: bold;
             pointer-events: none; z-index: 10000;
-            opacity: 0;
-            transform: translateY(-10px) translateX(-50%); 
+            opacity: 0; transform: translateY(-10px) translateX(-50%); 
             transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
             max-width: 250px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); word-wrap: break-word;
         }
         .custom-tooltip.show { opacity: 1; transform: translateY(0) translateX(-50%); }
-
-        /* Стрелочка сверху и смотрит вверх */
         .custom-tooltip::after {
             content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
-            border-width: 0 8px 8px 8px; 
-            border-style: solid; border-color: transparent transparent black transparent;
+            border-width: 0 8px 8px 8px; border-style: solid; border-color: transparent transparent black transparent;
         }
         .custom-tooltip::before {
             content: ''; position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
-            border-width: 0 6px 6px 6px; 
-            border-style: solid; border-color: transparent transparent white transparent;
-            z-index: 1;
+            border-width: 0 6px 6px 6px; border-style: solid; border-color: transparent transparent white transparent; z-index: 1;
+        }
+
+        /* --- КАСТОМНОЕ КОНТЕКСТНОЕ МЕНЮ (ПКМ) --- */
+        .custom-context-menu {
+            position: fixed; background: white; border: 3px solid black; border-radius: 12px;
+            padding: 5px; display: none; flex-direction: column; z-index: 10001;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: menuFadeIn 0.15s var(--ease-out);
+            min-width: 150px;
+        }
+        @keyframes menuFadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .custom-context-menu button {
+            background: transparent; border: none; padding: 10px 15px;
+            text-align: left; font-size: 16px; font-weight: bold; font-family: inherit;
+            cursor: pointer; border-radius: 8px; transition: background 0.2s, color 0.2s;
+            color: black; outline: none;
+        }
+        .custom-context-menu button:hover {
+            background: #ffcccc; color: red;
         }
 
         .empty-state { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: #555; text-align: center; padding: 20px; transition: color 0.3s; }
@@ -99,7 +113,6 @@
             from { opacity: 0; transform: translateY(20px) scale(0.95); }
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
-
         .message { max-width: 70%; padding: 10px 15px; border: 2px solid black; border-radius: 15px; font-size: 16px; background: white; align-self: flex-start; display: flex; flex-direction: column; word-break: break-word; transition: background 0.3s, border-color 0.3s, color 0.3s; animation: slideInMessage 0.3s var(--ease-out) forwards; }
         .message.own { align-self: flex-end; background: #e0f7fa; }
         .message-sender { font-size: 12px; font-weight: bold; color: #666; margin-bottom: 3px; }
@@ -135,9 +148,14 @@
         body.dark-mode .physical-switch.active .switch-block { background-color: white; }
         body.dark-mode .participant-avatar { background-color: #333; color: white; border-color: white; }
         body.dark-mode .participant-more { background-color: #1a1a1a; color: white; border-color: white; }
+        
         body.dark-mode .custom-tooltip { background-color: #333; color: white; border-color: white; }
         body.dark-mode .custom-tooltip::after { border-color: transparent transparent white transparent; }
         body.dark-mode .custom-tooltip::before { border-color: transparent transparent #333 transparent; }
+
+        body.dark-mode .custom-context-menu { background: #1a1a1a; border-color: white; }
+        body.dark-mode .custom-context-menu button { color: white; }
+        body.dark-mode .custom-context-menu button:hover { background: #330000; color: red; }
 
         /* ========================================= */
         /* --- МОБИЛЬНАЯ АДАПТАЦИЯ --- */
@@ -163,7 +181,17 @@
 <body>
 
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
+    <!-- Кастомная подсказка -->
     <div class="custom-tooltip" id="tooltip"></div>
+    
+    <!-- Кастомное контекстное меню (ПКМ) -->
+    <div class="custom-context-menu" id="customContextMenu">
+        <button id="ctxDeleteBtn">Удалить</button>
+    </div>
+
+    <!-- Твой звуковой файл -->
+    <audio id="notificationSound" src="notification.mp3" preload="auto"></audio>
 
     <div class="app-container">
         <aside class="sidebar" id="sidebar">
@@ -227,18 +255,15 @@
             if (supabaseUrl && supabaseKey) supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
         } catch (e) { console.error("Ошибка подключения Supabase:", e); }
 
-        // --- ЗВУКОВОЕ УВЕДОМЛЕНИЕ (СВОЙ ЗВУК) ---
+        // --- ЗВУКОВОЕ УВЕДОМЛЕНИЕ ---
         const notificationSound = document.getElementById('notificationSound');
-
-        // Браузеры блокируют звук, пока пользователь не кликнет по сайту.
-        // Этот блок "разблокирует" звук при первом же клике.
         document.addEventListener('click', () => {
             if (notificationSound) {
-                notificationSound.volume = 0; // Делаем беззвучным
+                notificationSound.volume = 0;
                 notificationSound.play().then(() => {
                     notificationSound.pause();
                     notificationSound.currentTime = 0;
-                    notificationSound.volume = 1; // Возвращаем громкость
+                    notificationSound.volume = 1;
                 }).catch(() => {});
             }
         }, { once: true });
@@ -246,19 +271,17 @@
         function playNotificationSound() {
             if (!notificationSound) return;
             try {
-                notificationSound.currentTime = 0; // Отматываем в начало (если звук уже играл)
+                notificationSound.currentTime = 0;
                 notificationSound.play().catch(e => console.warn("Браузер заблокировал звук", e));
-            } catch (e) {
-                console.warn("Не удалось воспроизвести звук", e);
-            }
+            } catch (e) { console.warn("Не удалось воспроизвести звук", e); }
         }
 
         // --- ЗАГРУЗКА СОХРАНЕННЫХ ДАННЫХ ---
         let chats = JSON.parse(localStorage.getItem('mySavedChats')) || [];
         let activeChatId = localStorage.getItem('myActiveChatId') || null;
-        
         let currentChannel = null;
         let currentParticipants = new Set(); 
+        let contextChatId = null; // Храним ID чата для контекстного меню
         const nameWords = ["бобик", "пупочек", "чебурек", "квантовый-огурец", "турбо-пельмень", "кринж-мастер"];
 
         const sidebar = document.getElementById('sidebar');
@@ -275,6 +298,8 @@
         const chatTitleDisplay = document.getElementById('chatTitleDisplay');
         const participantsContainer = document.getElementById('participantsContainer');
         const tooltip = document.getElementById('tooltip'); 
+        const customContextMenu = document.getElementById('customContextMenu');
+        const ctxDeleteBtn = document.getElementById('ctxDeleteBtn');
         
         const createChatBtn = document.getElementById('createChatBtn');
         const createChatModal = document.getElementById('createChatModal');
@@ -285,11 +310,8 @@
 
         function saveState() {
             localStorage.setItem('mySavedChats', JSON.stringify(chats));
-            if (activeChatId) {
-                localStorage.setItem('myActiveChatId', activeChatId);
-            } else {
-                localStorage.removeItem('myActiveChatId');
-            }
+            if (activeChatId) localStorage.setItem('myActiveChatId', activeChatId);
+            else localStorage.removeItem('myActiveChatId');
         }
 
         // --- ЛОГИКА ПОДСКАЗКИ ---
@@ -300,17 +322,49 @@
             tooltip.style.top = `${rect.bottom + 12}px`;
             tooltip.classList.add('show');
         }
-
         function hideTooltip() { tooltip.classList.remove('show'); }
 
+        // --- ЛОГИКА КОНТЕКСТНОГО МЕНЮ ---
+        function showContextMenu(e, chatId) {
+            contextChatId = chatId;
+            customContextMenu.style.display = 'flex';
+            
+            // Позиционируем меню по курсору, чтобы не уходило за края экрана
+            let x = e.clientX;
+            let y = e.clientY;
+            const menuWidth = customContextMenu.offsetWidth;
+            const menuHeight = customContextMenu.offsetHeight;
+
+            if (x + menuWidth > window.innerWidth) x -= menuWidth;
+            if (y + menuHeight > window.innerHeight) y -= menuHeight;
+
+            customContextMenu.style.left = `${x}px`;
+            customContextMenu.style.top = `${y}px`;
+        }
+
+        function hideContextMenu() {
+            customContextMenu.style.display = 'none';
+            contextChatId = null;
+        }
+
+        // Удаление через контекстное меню
+        ctxDeleteBtn.addEventListener('click', () => {
+            if (contextChatId) {
+                deleteChat(contextChatId);
+                hideContextMenu();
+            }
+        });
+
+        // Глобальные клики для скрытия подсказок и меню
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.participant-avatar') && !e.target.closest('.participant-more')) hideTooltip();
+            if (!e.target.closest('#customContextMenu')) hideContextMenu();
         });
-        messagesContainer.addEventListener('scroll', hideTooltip);
-        window.addEventListener('resize', hideTooltip);
+        messagesContainer.addEventListener('scroll', () => { hideTooltip(); hideContextMenu(); });
+        window.addEventListener('resize', () => { hideTooltip(); hideContextMenu(); });
 
         // --- ОСТАЛЬНАЯ ЛОГИКА ---
-        function toggleSidebar() { sidebar.classList.toggle('open'); sidebarOverlay.classList.toggle('active'); }
+        function toggleSidebar() { sidebar.classList.toggle('open'); sidebarOverlay.classList.toggle('active'); hideTooltip(); hideContextMenu(); }
         mobileChatsBtn.addEventListener('click', toggleSidebar);
         sidebarOverlay.addEventListener('click', toggleSidebar);
 
@@ -388,11 +442,41 @@
             chats.forEach(chat => {
                 const div = document.createElement('div');
                 div.className = `chat-item ${chat.id === activeChatId ? 'active' : ''}`;
-                div.innerHTML = `<span class="chat-name">${chat.name}</span><span class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${chat.id}')">✕</span>`;
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'chat-name';
+                nameSpan.textContent = chat.name;
+                
+                const deleteBtn = document.createElement('span');
+                deleteBtn.className = 'delete-chat-btn';
+                deleteBtn.innerHTML = '✕';
+                
+                // События для крестика (подсказка "Закрыть")
+                deleteBtn.addEventListener('mouseenter', () => showTooltip(deleteBtn, "Закрыть"));
+                deleteBtn.addEventListener('mouseleave', hideTooltip);
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    hideTooltip();
+                    deleteChat(chat.id);
+                });
+
+                div.appendChild(nameSpan);
+                div.appendChild(deleteBtn);
+                
+                // Клик по чату
                 div.onclick = () => {
                     selectChat(chat.id);
                     if(window.innerWidth <= 768) toggleSidebar(); 
                 };
+
+                // ПКМ по чату (Контекстное меню)
+                div.addEventListener('contextmenu', (e) => {
+                    e.preventDefault(); // Отменяем стандартное меню браузера
+                    e.stopPropagation();
+                    hideTooltip();
+                    showContextMenu(e, chat.id);
+                });
+
                 chatListEl.appendChild(div);
             });
         }
@@ -511,9 +595,8 @@
                     }
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-                    // --- ПРОВЕРКА ДЛЯ ЗВУКА ---
                     if (document.hidden && payload.new.username !== usernameInput.value.trim()) {
-                        playNotificationSound(); // Играем твой звук
+                        playNotificationSound();
                     }
                 }).subscribe();
         }
