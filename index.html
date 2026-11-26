@@ -34,12 +34,7 @@
         .chat-name-wrapper { display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden; }
         .chat-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; font-weight: bold; }
         
-        /* Бейдж непрочитанных сообщений */
-        .unread-badge {
-            background-color: #ff3b30; color: white; border: 2px solid black;
-            border-radius: 10px; padding: 2px 7px; font-size: 12px; font-weight: bold;
-            display: none; animation: popIn 0.3s var(--ease-bounce);
-        }
+        .unread-badge { background-color: #ff3b30; color: white; border: 2px solid black; border-radius: 10px; padding: 2px 7px; font-size: 12px; font-weight: bold; display: none; animation: popIn 0.3s var(--ease-bounce); }
         @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
 
         .delete-chat-btn { font-size: 18px; font-weight: bold; color: black; cursor: pointer; padding: 0 5px; border-radius: 50%; line-height: 1; transition: color 0.2s, background 0.2s, transform 0.2s; user-select: none; }
@@ -56,12 +51,7 @@
         .switch-block { position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: #d3d3d3; border-top: 3px solid black; transition: transform 0.4s var(--ease-bounce), background 0.3s, border-color 0.3s; }
         .physical-switch.active .switch-block { transform: translateY(-100%); border-top: none; border-bottom: 3px solid black; background: #333; }
 
-        /* Кнопка включения пушей */
-        .enable-notifications-btn {
-            padding: 10px; background: #e0f7fa; border: 3px solid black; border-radius: 10px;
-            font-weight: bold; cursor: pointer; transition: background 0.2s, transform 0.1s;
-            display: none; /* Изначально скрыта */
-        }
+        .enable-notifications-btn { padding: 10px; background: #e0f7fa; border: 3px solid black; border-radius: 10px; font-weight: bold; cursor: pointer; transition: background 0.2s, transform 0.1s; display: none; }
         .enable-notifications-btn:active { transform: scale(0.95); }
 
         /* --- ПРАВАЯ ПАНЕЛЬ (ЧАТ) --- */
@@ -71,7 +61,6 @@
         .mobile-chats-btn:active { transform: scale(0.9); }
         .chat-title { font-weight: bold; font-size: 18px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; }
         
-        /* --- БЛОК УЧАСТНИКОВ --- */
         .participants-container { display: flex; flex-direction: row-reverse; gap: 5px; align-items: center; flex-shrink: 0; }
         .participant-avatar, .participant-more {
             width: 34px; height: 34px; border-radius: 50%; border: 3px solid black; 
@@ -97,18 +86,50 @@
         .custom-context-menu button:hover { background: #ffcccc; color: red; }
 
         .empty-state { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: #555; text-align: center; padding: 20px; transition: color 0.3s; }
-        .messages-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
         
+        /* --- КОНТЕЙНЕР СООБЩЕНИЙ И ИГРА --- */
+        .messages-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; position: relative; overflow-x: hidden; }
+        
+        /* Стили для режима игры */
+        .messages-container.game-active { overflow: hidden; } /* Отключаем скролл во время игры */
+        
+        .messages-container.game-active .message {
+            position: absolute;
+            margin: 0;
+            transition: left 0.8s cubic-bezier(0.25, 1, 0.5, 1); /* Плавное разлетание по горизонтали */
+            box-shadow: 0 4px 0 black; /* Добавляем объем для платформ */
+            z-index: 2;
+        }
+
         @keyframes slideInMessage { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         .message { max-width: 70%; padding: 10px 15px; border: 2px solid black; border-radius: 15px; font-size: 16px; background: white; align-self: flex-start; display: flex; flex-direction: column; word-break: break-word; transition: background 0.3s, border-color 0.3s, color 0.3s; animation: slideInMessage 0.3s var(--ease-out) forwards; }
         .message.own { align-self: flex-end; background: #e0f7fa; }
         .message-sender { font-size: 12px; font-weight: bold; color: #666; margin-bottom: 3px; }
         .message.own .message-sender { text-align: right; color: #00796b; }
         
-        .input-area { display: flex; padding: 10px; gap: 10px; border-top: 2px solid transparent; }
+        /* Персонаж игры */
+        #frokCharacter {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            bottom: -60px; /* Прячем за экран */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: none;
+            pointer-events: none; /* Чтобы не мешал кликам */
+        }
+        
+        .input-area { display: flex; padding: 10px; gap: 10px; border-top: 2px solid transparent; z-index: 5; background: white; transition: background 0.3s; }
         .input-area input { flex: 1; padding: 15px; border: 3px solid black; border-radius: 15px; font-size: 16px; outline: none; width: 100%; transition: background 0.3s, border-color 0.3s, color 0.3s; }
-        .input-area button { padding: 0 20px; border: 3px solid black; border-radius: 15px; background: white; font-weight: bold; cursor: pointer; font-size: 18px; transition: transform 0.2s var(--ease-bounce), background 0.3s, border-color 0.3s, color 0.3s; }
-        .input-area button:hover { transform: scale(1.05); } .input-area button:active { transform: scale(0.95); }
+        
+        .input-area button { padding: 0 15px; border: 3px solid black; border-radius: 15px; background: white; font-weight: bold; cursor: pointer; font-size: 18px; transition: transform 0.2s var(--ease-bounce), background 0.3s, border-color 0.3s, color 0.3s; }
+        .input-area button:hover { transform: scale(1.05); } 
+        .input-area button:active { transform: scale(0.95); }
+
+        /* Спец-кнопка игры */
+        #gameBtn { font-size: 20px; padding: 0 15px; }
+        #gameBtn.active { background: #ffcccc; transform: scale(1.1); box-shadow: 0 0 10px red; }
 
         /* --- МОДАЛЬНОЕ ОКНО --- */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.4); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
@@ -123,9 +144,9 @@
         /* --- ТЁМНАЯ ТЕМА --- */
         body.dark-mode { background-color: #000000; color: white; }
         body.dark-mode .sidebar { background-color: #000000; }
-        body.dark-mode .create-chat-btn, body.dark-mode .chat-list-container, body.dark-mode .chat-item, body.dark-mode .sidebar-footer, body.dark-mode .username-container input, body.dark-mode .chat-header, body.dark-mode .chat-area, body.dark-mode .input-area input, body.dark-mode .input-area button, body.dark-mode .modal-content, body.dark-mode .modal-content input, body.dark-mode .modal-actions button, body.dark-mode .mobile-chats-btn { background-color: #1a1a1a; color: white; border-color: white; }
+        body.dark-mode .create-chat-btn, body.dark-mode .chat-list-container, body.dark-mode .chat-item, body.dark-mode .sidebar-footer, body.dark-mode .username-container input, body.dark-mode .chat-header, body.dark-mode .chat-area, body.dark-mode .input-area input, body.dark-mode .input-area button, body.dark-mode .modal-content, body.dark-mode .modal-content input, body.dark-mode .modal-actions button, body.dark-mode .mobile-chats-btn, body.dark-mode .input-area { background-color: #1a1a1a; color: white; border-color: white; }
         body.dark-mode .unread-badge { border-color: white; }
-        body.dark-mode .message { background-color: #2a2a2a; color: white; border-color: white; }
+        body.dark-mode .message { background-color: #2a2a2a; color: white; border-color: white; box-shadow: 0 4px 0 white; }
         body.dark-mode .message.own { background-color: #004d40; border-color: white; }
         body.dark-mode .message-sender { color: #aaaaaa; } body.dark-mode .message.own .message-sender { color: #88ddcc; }
         body.dark-mode .empty-state { color: #aaaaaa; } body.dark-mode .delete-chat-btn { color: white; }
@@ -209,10 +230,15 @@
             </div>
 
             <div id="emptyState" class="empty-state">Не открыт ни один из чатов</div>
-            <div class="messages-container" id="messagesContainer" style="display: none;"></div>
+            
+            <div class="messages-container" id="messagesContainer" style="display: none;">
+                <!-- Сюда вставляются сообщения -->
+                <img id="frokCharacter" src="frok.gif" alt="Frok">
+            </div>
 
             <div class="input-area" id="inputArea" style="display: none;">
                 <input type="text" id="messageInput" placeholder="Написать сообщение..." autocomplete="off">
+                <button id="gameBtn" title="Режим Doodle Jump">🎮</button>
                 <button id="sendBtn">></button>
             </div>
         </main>
@@ -261,10 +287,8 @@
             } catch (e) { console.warn("Не удалось воспроизвести звук", e); }
         }
 
-        // --- СИСТЕМНЫЕ УВЕДОМЛЕНИЯ (API БРАУЗЕРА) ---
+        // --- СИСТЕМНЫЕ УВЕДОМЛЕНИЯ ---
         const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
-        
-        // ИСПРАВЛЕНИЕ 1: Показываем кнопку, если разрешение еще не запрошено
         if (!("Notification" in window)) {
             enableNotificationsBtn.style.display = 'none';
         } else if (Notification.permission === "granted") {
@@ -274,7 +298,6 @@
             enableNotificationsBtn.disabled = true;
             enableNotificationsBtn.style.display = 'block';
         } else {
-            // Если статус "default", показываем кнопку!
             enableNotificationsBtn.style.display = 'block';
         }
 
@@ -288,19 +311,12 @@
 
         function showSystemNotification(title, body, chatId) {
             if (Notification.permission === "granted" && !document.hasFocus()) {
-                const notification = new Notification(title, {
-                    body: body,
-                    icon: 'https://cdn-icons-png.flaticon.com/512/5968/5968806.png'
-                });
-                notification.onclick = function() {
-                    window.focus();
-                    selectChat(chatId);
-                    this.close();
-                };
+                const notification = new Notification(title, { body: body, icon: 'https://cdn-icons-png.flaticon.com/512/5968/5968806.png' });
+                notification.onclick = function() { window.focus(); selectChat(chatId); this.close(); };
             }
         }
 
-        // --- ЗАГРУЗКА ДАННЫХ ---
+        // --- ДАННЫЕ ---
         let chats = JSON.parse(localStorage.getItem('mySavedChats')) || [];
         let activeChatId = localStorage.getItem('myActiveChatId') || null;
         let unreadCounts = JSON.parse(localStorage.getItem('myUnreadCounts')) || {};
@@ -310,6 +326,7 @@
         let contextChatId = null; 
         const nameWords = ["бобик", "пупочек", "чебурек", "квантовый-огурец", "турбо-пельмень", "кринж-мастер"];
 
+        // DOM
         const sidebar = document.getElementById('sidebar');
         const sidebarOverlay = document.getElementById('sidebarOverlay');
         const mobileChatsBtn = document.getElementById('mobileChatsBtn');
@@ -334,29 +351,201 @@
         const confirmCreateBtn = document.getElementById('confirmCreateBtn');
         const themeToggle = document.getElementById('themeToggle');
 
-        function saveState() {
-            localStorage.setItem('mySavedChats', JSON.stringify(chats));
-            localStorage.setItem('myUnreadCounts', JSON.stringify(unreadCounts));
-            if (activeChatId) localStorage.setItem('myActiveChatId', activeChatId);
-            else localStorage.removeItem('myActiveChatId');
+        // --- ИГРА ---
+        const gameBtn = document.getElementById('gameBtn');
+        const frok = document.getElementById('frokCharacter');
+        let isGameActive = false;
+        let gameLoopId;
+        let frokPhysics = {
+            x: 0, y: 0, vx: 0, vy: 0, gravity: 0.6, jumpPower: 13, isJumping: false
+        };
+        let keys = { left: false, right: false };
+        let platforms = []; // Массив объектов { el, left, right, top, bottom }
+        let tiltMultiplier = 1; // Для мобилок
+
+        // Запрос разрешения на гироскоп для iOS
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            document.body.addEventListener('click', function() {
+                DeviceOrientationEvent.requestPermission().catch(console.error);
+            }, { once: true });
         }
 
-        // --- ИСПРАВЛЕНИЕ 2: УПРАВЛЕНИЕ ЗАГОЛОВКОМ ВКЛАДКИ ---
-        const originalTitle = document.title;
-        function updateTitle() {
-            const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
-            // Используем !document.hasFocus() вместо document.hidden для надежности
-            if (totalUnread > 0 && !document.hasFocus()) {
-                document.title = `(${totalUnread}) Новое сообщение!`;
-            } else {
-                document.title = originalTitle;
+        function startGame() {
+            if (!activeChatId || messagesContainer.children.length <= 1) {
+                alert("Сначала отправьте хотя бы одно сообщение, чтобы было по чему прыгать!");
+                return;
             }
+
+            isGameActive = true;
+            gameBtn.classList.add('active');
+            messagesContainer.classList.add('game-active');
+            
+            const containerRect = messagesContainer.getBoundingClientRect();
+            const msgs = messagesContainer.querySelectorAll('.message');
+            
+            platforms = [];
+            
+            // Разбрасываем сообщения
+            msgs.forEach(msg => {
+                const msgRect = msg.getBoundingClientRect();
+                // Сохраняем оригинальную высоту (Y) относительно контейнера
+                const topOffset = msgRect.top - containerRect.top + messagesContainer.scrollTop;
+                
+                // Плавно перемещаем
+                msg.style.position = 'absolute';
+                msg.style.top = `${topOffset}px`;
+                
+                // Случайное положение по горизонтали (от 5% до 70% экрана)
+                const randomLeft = 5 + Math.random() * 65; 
+                msg.style.left = `${randomLeft}%`;
+                
+                // Сохраняем для физики коллизий
+                platforms.push({
+                    el: msg,
+                    top: topOffset,
+                    // Примерные размеры, пересчитаем точнее в цикле
+                    left: 0, right: 0
+                });
+            });
+
+            // Настраиваем персонажа
+            frok.style.display = 'block';
+            // Ставим по центру снизу
+            frok.style.left = '50%';
+            frok.style.transform = 'translateX(-50%)';
+            frok.style.bottom = '0px'; 
+            
+            frokPhysics.x = (containerRect.width / 2) - 25;
+            frokPhysics.y = 0; // Отсчет от низа контейнера
+            frokPhysics.vx = 0;
+            frokPhysics.vy = 0;
+
+            // Очищаем таймеры и запускаем игру
+            cancelAnimationFrame(gameLoopId);
+            gameLoop();
+
+            // Навешиваем события управления
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+            window.addEventListener('deviceorientation', handleTilt);
+        }
+
+        function stopGame() {
+            isGameActive = false;
+            gameBtn.classList.remove('active');
+            messagesContainer.classList.remove('game-active');
+            
+            cancelAnimationFrame(gameLoopId);
+            frok.style.display = 'none';
+            
+            // Возвращаем сообщения на место
+            const msgs = messagesContainer.querySelectorAll('.message');
+            msgs.forEach(msg => {
+                msg.style.position = '';
+                msg.style.top = '';
+                msg.style.left = '';
+            });
+
+            // Отключаем управление
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('keyup', handleKeyUp);
+            window.removeEventListener('deviceorientation', handleTilt);
+            
+            platforms = [];
+            messagesContainer.scrollTop = messagesContainer.scrollHeight; // Скролл вниз
+        }
+
+        // Управление
+        function handleKeyDown(e) {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D' || e.key === 'в' || e.key === 'В') keys.right = true;
+        }
+        function handleKeyUp(e) {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D' || e.key === 'в' || e.key === 'В') keys.right = false;
         }
         
-        // Обновляем заголовок при переключении вкладок или окон
-        window.addEventListener('focus', updateTitle);
-        window.addEventListener('blur', updateTitle);
-        document.addEventListener('visibilitychange', updateTitle);
+        function handleTilt(e) {
+            // gamma - это наклон влево-вправо (от -90 до 90)
+            if (e.gamma !== null) {
+                // Ограничиваем наклон и делаем чувствительность
+                frokPhysics.vx += e.gamma * 0.05;
+            }
+        }
+
+        // Главный игровой цикл
+        function gameLoop() {
+            if (!isGameActive) return;
+
+            const containerRect = messagesContainer.getBoundingClientRect();
+            const frokSize = 50;
+
+            // 1. Физика управления
+            if (keys.left) frokPhysics.vx -= 1.5;
+            if (keys.right) frokPhysics.vx += 1.5;
+
+            // Трение
+            frokPhysics.vx *= 0.9;
+
+            // Ограничение скорости
+            if (frokPhysics.vx > 10) frokPhysics.vx = 10;
+            if (frokPhysics.vx < -10) frokPhysics.vx = -10;
+
+            // Применяем скорость
+            frokPhysics.x += frokPhysics.vx;
+
+            // 2. Гравитация
+            frokPhysics.vy -= frokPhysics.gravity; // Движение вверх по координате Y (так как отсчет снизу)
+            frokPhysics.y += frokPhysics.vy;
+
+            // Ограничение по бокам
+            if (frokPhysics.x < 0) { frokPhysics.x = 0; frokPhysics.vx = 0; }
+            if (frokPhysics.x > containerRect.width - frokSize) { frokPhysics.x = containerRect.width - frokSize; frokPhysics.vx = 0; }
+
+            // 3. Проверка коллизий (Падение на платформы)
+            // Ищем только когда падаем вниз (vy < 0)
+            if (frokPhysics.vy < 0) {
+                platforms.forEach(p => {
+                    const pRect = p.el.getBoundingClientRect();
+                    const pTopRelative = pRect.top - containerRect.top; // Верх платформы относительно окна
+                    
+                    // Координаты низа персонажа в экранных координатах
+                    const frokBottomScreen = containerRect.bottom - frokPhysics.y;
+                    
+                    // Проверяем, пересекаемся ли мы с верхом платформы (с небольшим зазором)
+                    if (frokBottomScreen >= pTopRelative - 10 && frokBottomScreen <= pTopRelative + 20) {
+                        // Проверяем пересечение по X
+                        const pLeft = pRect.left - containerRect.left;
+                        const pRight = pRect.right - containerRect.left;
+                        
+                        if (frokPhysics.x + frokSize > pLeft && frokPhysics.x < pRight) {
+                            // Отскок!
+                            frokPhysics.vy = frokPhysics.jumpPower;
+                        }
+                    }
+                });
+            }
+
+            // Если упал за нижнюю границу экрана
+            if (frokPhysics.y < -100) {
+                frokPhysics.y = 0;
+                frokPhysics.vy = 15;
+            }
+
+            // 4. Отрисовка
+            frok.style.left = `${frokPhysics.x}px`;
+            frok.style.bottom = `${frokPhysics.y}px`;
+            frok.style.transform = `rotate(${frokPhysics.vx * 2}deg)`; // Наклон вбок при движении
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        // Кнопка включения игры
+        gameBtn.addEventListener('click', () => {
+            if (isGameActive) stopGame();
+            else startGame();
+        });
+
 
         // --- ЛОГИКА ПОДСКАЗКИ ---
         function showTooltip(element, text) {
@@ -524,10 +713,9 @@
         }
 
         function selectChat(id) {
+            if (isGameActive) stopGame(); // Выключаем игру при смене чата
             activeChatId = id;
-            
             unreadCounts[id] = 0;
-            
             saveState(); 
             updateTitle();
             
@@ -545,6 +733,7 @@
         }
 
         window.deleteChat = function(id) {
+            if (isGameActive) stopGame();
             chats = chats.filter(chat => chat.id !== id);
             delete unreadCounts[id];
             
@@ -558,7 +747,7 @@
             
             renderChats(); 
             updateRightPanel();
-            if (activeChatId === null) messagesContainer.innerHTML = '';
+            if (activeChatId === null) messagesContainer.innerHTML = '<img id="frokCharacter" src="frok.gif" style="display:none;">';
         }
 
         function renderParticipantsList() {
@@ -612,12 +801,22 @@
         }
 
         async function renderMessages() {
-            messagesContainer.innerHTML = '';
+            // Очищаем все, КРОМЕ персонажа
+            Array.from(messagesContainer.children).forEach(child => {
+                if (child.id !== 'frokCharacter') child.remove();
+            });
+
             if (activeChatId === null || !supabaseClient) return;
             
             const { data, error } = await supabaseClient.from('messages').select('*').eq('chat_id', activeChatId.toString()).order('created_at', { ascending: true });
             
-            if (error) { messagesContainer.innerHTML = `<div style="color:red;">Ошибка загрузки: ${error.message}</div>`; return; }
+            if (error) { 
+                const errDiv = document.createElement('div');
+                errDiv.style.color = 'red';
+                errDiv.textContent = `Ошибка загрузки: ${error.message}`;
+                messagesContainer.appendChild(errDiv); 
+                return; 
+            }
             
             data.forEach(msg => {
                 currentParticipants.add(msg.username);
@@ -646,6 +845,12 @@
                             renderParticipantsList();
                         }
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        
+                        // Если пришло сообщение во время игры, платформа упадет, останавливаем игру
+                        if (isGameActive) {
+                            stopGame();
+                            // alert("Пришло новое сообщение! Игра окончена."); // Опционально
+                        }
                     } else if (!isMyMessage) {
                         unreadCounts[msgChatId] = (unreadCounts[msgChatId] || 0) + 1;
                         saveState();
@@ -653,7 +858,6 @@
                         updateTitle();
                     }
 
-                    // ИСПРАВЛЕНИЕ: Уведомления срабатывают, если фокуса нет
                     if (!document.hasFocus() && !isMyMessage) {
                         playNotificationSound();
                         const chatName = chats.find(c => c.id === msgChatId)?.name || msgChatId;
