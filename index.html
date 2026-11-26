@@ -90,14 +90,13 @@
         /* --- КОНТЕЙНЕР СООБЩЕНИЙ И ИГРА --- */
         .messages-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; position: relative; overflow-x: hidden; }
         
-        /* Стили для режима игры */
-        .messages-container.game-active { overflow: hidden; } /* Отключаем скролл во время игры */
+        .messages-container.game-active { overflow: hidden; }
         
         .messages-container.game-active .message {
             position: absolute;
             margin: 0;
-            transition: left 0.8s cubic-bezier(0.25, 1, 0.5, 1); /* Плавное разлетание по горизонтали */
-            box-shadow: 0 4px 0 black; /* Добавляем объем для платформ */
+            transition: left 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            box-shadow: 0 4px 0 black; 
             z-index: 2;
         }
 
@@ -107,17 +106,16 @@
         .message-sender { font-size: 12px; font-weight: bold; color: #666; margin-bottom: 3px; }
         .message.own .message-sender { text-align: right; color: #00796b; }
         
-        /* Персонаж игры */
         #frokCharacter {
             position: absolute;
             width: 50px;
             height: 50px;
-            bottom: -60px; /* Прячем за экран */
+            bottom: -60px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
             display: none;
-            pointer-events: none; /* Чтобы не мешал кликам */
+            pointer-events: none;
         }
         
         .input-area { display: flex; padding: 10px; gap: 10px; border-top: 2px solid transparent; z-index: 5; background: white; transition: background 0.3s; }
@@ -127,7 +125,6 @@
         .input-area button:hover { transform: scale(1.05); } 
         .input-area button:active { transform: scale(0.95); }
 
-        /* Спец-кнопка игры */
         #gameBtn { font-size: 20px; padding: 0 15px; }
         #gameBtn.active { background: #ffcccc; transform: scale(1.1); box-shadow: 0 0 10px red; }
 
@@ -316,10 +313,20 @@
             }
         }
 
-        // --- ДАННЫЕ ---
-        let chats = JSON.parse(localStorage.getItem('mySavedChats')) || [];
+        // --- БЕЗОПАСНАЯ ЗАГРУЗКА ДАННЫХ ---
+        let chats = [];
+        try {
+            const parsed = JSON.parse(localStorage.getItem('mySavedChats'));
+            if (Array.isArray(parsed)) chats = parsed;
+        } catch (e) { console.warn("Ошибка чтения чатов, сброс."); }
+
+        let unreadCounts = {};
+        try {
+            const parsedUnread = JSON.parse(localStorage.getItem('myUnreadCounts'));
+            if (parsedUnread && typeof parsedUnread === 'object') unreadCounts = parsedUnread;
+        } catch (e) {}
+
         let activeChatId = localStorage.getItem('myActiveChatId') || null;
-        let unreadCounts = JSON.parse(localStorage.getItem('myUnreadCounts')) || {};
         
         let currentChannel = null;
         let currentParticipants = new Set(); 
@@ -353,17 +360,23 @@
 
         // --- ИГРА ---
         const gameBtn = document.getElementById('gameBtn');
-        const frok = document.getElementById('frokCharacter');
+        
+        // Защитная проверка: если картинки нет в HTML, создаем её
+        let frok = document.getElementById('frokCharacter');
+        if (!frok) {
+            frok = document.createElement('img');
+            frok.id = 'frokCharacter';
+            frok.src = 'frok.gif';
+            frok.alt = 'Frok';
+            messagesContainer.appendChild(frok);
+        }
+
         let isGameActive = false;
         let gameLoopId;
-        let frokPhysics = {
-            x: 0, y: 0, vx: 0, vy: 0, gravity: 0.6, jumpPower: 13, isJumping: false
-        };
+        let frokPhysics = { x: 0, y: 0, vx: 0, vy: 0, gravity: 0.6, jumpPower: 13 };
         let keys = { left: false, right: false };
-        let platforms = []; // Массив объектов { el, left, right, top, bottom }
-        let tiltMultiplier = 1; // Для мобилок
+        let platforms = []; 
 
-        // Запрос разрешения на гироскоп для iOS
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             document.body.addEventListener('click', function() {
                 DeviceOrientationEvent.requestPermission().catch(console.error);
@@ -371,7 +384,7 @@
         }
 
         function startGame() {
-            if (!activeChatId || messagesContainer.children.length <= 1) {
+            if (!activeChatId || messagesContainer.querySelectorAll('.message').length === 0) {
                 alert("Сначала отправьте хотя бы одно сообщение, чтобы было по чему прыгать!");
                 return;
             }
@@ -385,60 +398,50 @@
             
             platforms = [];
             
-            // Разбрасываем сообщения
             msgs.forEach(msg => {
                 const msgRect = msg.getBoundingClientRect();
-                // Сохраняем оригинальную высоту (Y) относительно контейнера
                 const topOffset = msgRect.top - containerRect.top + messagesContainer.scrollTop;
                 
-                // Плавно перемещаем
                 msg.style.position = 'absolute';
                 msg.style.top = `${topOffset}px`;
                 
-                // Случайное положение по горизонтали (от 5% до 70% экрана)
                 const randomLeft = 5 + Math.random() * 65; 
                 msg.style.left = `${randomLeft}%`;
                 
-                // Сохраняем для физики коллизий
                 platforms.push({
                     el: msg,
                     top: topOffset,
-                    // Примерные размеры, пересчитаем точнее в цикле
                     left: 0, right: 0
                 });
             });
 
-            // Настраиваем персонажа
             frok.style.display = 'block';
-            // Ставим по центру снизу
             frok.style.left = '50%';
             frok.style.transform = 'translateX(-50%)';
             frok.style.bottom = '0px'; 
             
             frokPhysics.x = (containerRect.width / 2) - 25;
-            frokPhysics.y = 0; // Отсчет от низа контейнера
+            frokPhysics.y = 0; 
             frokPhysics.vx = 0;
             frokPhysics.vy = 0;
 
-            // Очищаем таймеры и запускаем игру
             cancelAnimationFrame(gameLoopId);
             gameLoop();
 
-            // Навешиваем события управления
             document.addEventListener('keydown', handleKeyDown);
             document.addEventListener('keyup', handleKeyUp);
             window.addEventListener('deviceorientation', handleTilt);
         }
 
         function stopGame() {
+            if (!isGameActive) return;
             isGameActive = false;
             gameBtn.classList.remove('active');
             messagesContainer.classList.remove('game-active');
             
             cancelAnimationFrame(gameLoopId);
-            frok.style.display = 'none';
+            if (frok) frok.style.display = 'none';
             
-            // Возвращаем сообщения на место
             const msgs = messagesContainer.querySelectorAll('.message');
             msgs.forEach(msg => {
                 msg.style.position = '';
@@ -446,16 +449,14 @@
                 msg.style.left = '';
             });
 
-            // Отключаем управление
             document.removeEventListener('keydown', handleKeyDown);
             document.removeEventListener('keyup', handleKeyUp);
             window.removeEventListener('deviceorientation', handleTilt);
             
             platforms = [];
-            messagesContainer.scrollTop = messagesContainer.scrollHeight; // Скролл вниз
+            messagesContainer.scrollTop = messagesContainer.scrollHeight; 
         }
 
-        // Управление
         function handleKeyDown(e) {
             if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') keys.left = true;
             if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D' || e.key === 'в' || e.key === 'В') keys.right = true;
@@ -466,81 +467,60 @@
         }
         
         function handleTilt(e) {
-            // gamma - это наклон влево-вправо (от -90 до 90)
-            if (e.gamma !== null) {
-                // Ограничиваем наклон и делаем чувствительность
-                frokPhysics.vx += e.gamma * 0.05;
-            }
+            if (e.gamma !== null) frokPhysics.vx += e.gamma * 0.05;
         }
 
-        // Главный игровой цикл
         function gameLoop() {
-            if (!isGameActive) return;
+            if (!isGameActive || !frok) return;
 
             const containerRect = messagesContainer.getBoundingClientRect();
             const frokSize = 50;
 
-            // 1. Физика управления
             if (keys.left) frokPhysics.vx -= 1.5;
             if (keys.right) frokPhysics.vx += 1.5;
 
-            // Трение
             frokPhysics.vx *= 0.9;
 
-            // Ограничение скорости
             if (frokPhysics.vx > 10) frokPhysics.vx = 10;
             if (frokPhysics.vx < -10) frokPhysics.vx = -10;
 
-            // Применяем скорость
             frokPhysics.x += frokPhysics.vx;
 
-            // 2. Гравитация
-            frokPhysics.vy -= frokPhysics.gravity; // Движение вверх по координате Y (так как отсчет снизу)
+            frokPhysics.vy -= frokPhysics.gravity;
             frokPhysics.y += frokPhysics.vy;
 
-            // Ограничение по бокам
             if (frokPhysics.x < 0) { frokPhysics.x = 0; frokPhysics.vx = 0; }
             if (frokPhysics.x > containerRect.width - frokSize) { frokPhysics.x = containerRect.width - frokSize; frokPhysics.vx = 0; }
 
-            // 3. Проверка коллизий (Падение на платформы)
-            // Ищем только когда падаем вниз (vy < 0)
             if (frokPhysics.vy < 0) {
                 platforms.forEach(p => {
                     const pRect = p.el.getBoundingClientRect();
-                    const pTopRelative = pRect.top - containerRect.top; // Верх платформы относительно окна
-                    
-                    // Координаты низа персонажа в экранных координатах
+                    const pTopRelative = pRect.top - containerRect.top; 
                     const frokBottomScreen = containerRect.bottom - frokPhysics.y;
                     
-                    // Проверяем, пересекаемся ли мы с верхом платформы (с небольшим зазором)
                     if (frokBottomScreen >= pTopRelative - 10 && frokBottomScreen <= pTopRelative + 20) {
-                        // Проверяем пересечение по X
                         const pLeft = pRect.left - containerRect.left;
                         const pRight = pRect.right - containerRect.left;
                         
                         if (frokPhysics.x + frokSize > pLeft && frokPhysics.x < pRight) {
-                            // Отскок!
                             frokPhysics.vy = frokPhysics.jumpPower;
                         }
                     }
                 });
             }
 
-            // Если упал за нижнюю границу экрана
             if (frokPhysics.y < -100) {
                 frokPhysics.y = 0;
                 frokPhysics.vy = 15;
             }
 
-            // 4. Отрисовка
             frok.style.left = `${frokPhysics.x}px`;
             frok.style.bottom = `${frokPhysics.y}px`;
-            frok.style.transform = `rotate(${frokPhysics.vx * 2}deg)`; // Наклон вбок при движении
+            frok.style.transform = `rotate(${frokPhysics.vx * 2}deg)`;
 
             gameLoopId = requestAnimationFrame(gameLoop);
         }
 
-        // Кнопка включения игры
         gameBtn.addEventListener('click', () => {
             if (isGameActive) stopGame();
             else startGame();
@@ -713,14 +693,14 @@
         }
 
         function selectChat(id) {
-            if (isGameActive) stopGame(); // Выключаем игру при смене чата
+            if (isGameActive) stopGame(); // Безопасно выключаем игру
             activeChatId = id;
             unreadCounts[id] = 0;
             saveState(); 
             updateTitle();
             
             const currentChat = chats.find(c => c.id === id);
-            if (currentChat) { chatTitleDisplay.textContent = currentChat.name; }
+            if (currentChat && chatTitleDisplay) { chatTitleDisplay.textContent = currentChat.name; }
             
             currentParticipants.clear();
             const myName = usernameInput.value.trim();
@@ -747,10 +727,17 @@
             
             renderChats(); 
             updateRightPanel();
-            if (activeChatId === null) messagesContainer.innerHTML = '<img id="frokCharacter" src="frok.gif" style="display:none;">';
+            
+            // БЕЗОПАСНАЯ ОЧИСТКА БЕЗ innerHTML
+            if (activeChatId === null) {
+                Array.from(messagesContainer.children).forEach(child => {
+                    if (child.id !== 'frokCharacter') child.remove();
+                });
+            }
         }
 
         function renderParticipantsList() {
+            if (!participantsContainer) return;
             participantsContainer.innerHTML = '';
             let users = Array.from(currentParticipants);
             const myName = usernameInput.value.trim();
@@ -846,11 +833,7 @@
                         }
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                         
-                        // Если пришло сообщение во время игры, платформа упадет, останавливаем игру
-                        if (isGameActive) {
-                            stopGame();
-                            // alert("Пришло новое сообщение! Игра окончена."); // Опционально
-                        }
+                        if (isGameActive) stopGame();
                     } else if (!isMyMessage) {
                         unreadCounts[msgChatId] = (unreadCounts[msgChatId] || 0) + 1;
                         saveState();
@@ -886,19 +869,6 @@
         sendBtn.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-        initUsername();
-        renderChats();
-        updateTitle();
-        
-        if (activeChatId && chats.find(c => c.id === activeChatId)) {
-            selectChat(activeChatId);
-        } else {
-            activeChatId = null;
-            saveState();
-            updateRightPanel();
-        }
-
-        setupGlobalRealtime();
-    </script>
-</body>
-</html>
+        function updateTitle() {
+            const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+            if (
