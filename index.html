@@ -251,7 +251,7 @@
     </div>
 
     <!-- Версия сайта -->
-    <div class="site-version">v0.0.5</div>
+    <div class="site-version">v0.0.6</div>
 
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div class="custom-tooltip" id="tooltip"></div>
@@ -480,38 +480,39 @@
                 return;
             }
 
-            isGameActive = true;
-            gameBtn.classList.add('active');
-            messagesContainer.classList.add('game-active');
-            logoPopcorn.classList.add('show'); 
-            
             const containerRect = messagesContainer.getBoundingClientRect();
             const msgs = Array.from(messagesContainer.querySelectorAll('.message'));
             platforms = [];
             
-            // 1. Запоминаем точную высоту (Y) до изменений
+            // 1. Собираем позиции ДО того, как включим overflow: hidden
             const positions = msgs.map(msg => {
                 return {
                     el: msg,
-                    top: msg.offsetTop, // offsetTop идеально берет высоту с учетом gap
-                    randomLeftPx: 20 + Math.random() * (containerRect.width - 200) // Рандом в пикселях
+                    top: msg.offsetTop, // Запоминаем точное расстояние от верха
+                    randomLeft: 5 + Math.random() * 65 // Случайная позиция по X (в процентах)
                 };
             });
 
-            // 2. Применяем absolute, фиксируем Y, и СБРАСЫВАЕМ X в 0
+            // 2. Теперь меняем класс (отключаем скролл)
+            isGameActive = true;
+            gameBtn.classList.add('active');
+            messagesContainer.classList.add('game-active');
+            logoPopcorn.classList.add('show');
+            
+            // 3. Применяем absolute, фиксируем Y, ставим X в 0
             positions.forEach(({ el, top }) => {
                 el.style.position = 'absolute';
                 el.style.top = `${top}px`;
-                el.style.left = '0px';
-                el.style.margin = '0'; // Убираем влияние флекс-отступов
+                el.style.left = '0%'; 
+                el.style.margin = '0';
             });
 
-            // 3. Форсируем перерисовку браузера (чтобы left: 0 точно применился)
+            // Форсируем перерисовку браузера
             void messagesContainer.offsetWidth;
 
-            // 4. Запускаем плавное движение вбок
-            positions.forEach(({ el, top, randomLeftPx }) => {
-                el.style.left = `${randomLeftPx}px`;
+            // 4. Запускаем плавный разлет в стороны
+            positions.forEach(({ el, top, randomLeft }) => {
+                el.style.left = `${randomLeft}%`;
                 platforms.push({ el: el, top: top, left: 0, right: 0 });
             });
 
@@ -599,19 +600,21 @@
             if (frokPhysics.x > containerRect.width - frokSize) { frokPhysics.x = containerRect.width - frokSize; frokPhysics.vx = 0; }
 
             // --- КОЛЛИЗИИ (ТОЛЬКО СВЕРХУ) ---
-            if (frokPhysics.vy <= 0) { // Проверяем только если падаем или на пике прыжка
+            if (frokPhysics.vy <= 0) { 
+                // Вычисляем, на какой высоте от верхнего края контейнера находятся ноги лягушки
+                const frokBottomRelative = containerRect.height - frokPhysics.y;
+                
                 platforms.forEach(p => {
                     const pRect = p.el.getBoundingClientRect();
-                    const pTopRelative = pRect.top - containerRect.top; 
-                    const frokBottomScreen = containerRect.bottom - frokPhysics.y;
+                    const pTopRelative = pRect.top - containerRect.top;
                     
-                    // Проверяем, что ноги пересекают платформу и мы не провалились слишком глубоко
-                    if (frokBottomScreen >= pTopRelative - 15 && frokBottomScreen <= pTopRelative + 15) {
+                    // Если ноги пересекают верхнюю границу платформы
+                    if (frokBottomRelative >= pTopRelative - 15 && frokBottomRelative <= pTopRelative + 15) {
                         const pLeft = pRect.left - containerRect.left;
                         const pRight = pRect.right - containerRect.left;
                         
                         if (frokPhysics.x + frokSize > pLeft && frokPhysics.x < pRight) {
-                            frokPhysics.vy = frokPhysics.jumpPower;
+                            frokPhysics.vy = frokPhysics.jumpPower; // Отскок
                         }
                     }
                 });
@@ -624,9 +627,9 @@
 
             // --- САЛЬТУХА ---
             if (frokPhysics.vy > 0) {
-                frokPhysics.rotation += 12; // Быстрое вращение при прыжке вверх
+                frokPhysics.rotation += 12; // Быстро крутится вверх
             } else {
-                frokPhysics.rotation -= 3;  // Медленное вращение при падении
+                frokPhysics.rotation -= 3;  // Медленно крутится вниз
             }
 
             frok.style.left = `${frokPhysics.x}px`;
