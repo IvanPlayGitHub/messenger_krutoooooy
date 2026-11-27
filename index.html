@@ -483,64 +483,47 @@
             isGameActive = true;
             gameBtn.classList.add('active');
             messagesContainer.classList.add('game-active');
-            logoPopcorn.classList.add('show'); 
+            logoPopcorn.classList.add('show');
             
-            const containerRect = messagesContainer.getBoundingClientRect();
+            // Задаем высоту игрового мира
+            const WORLD_HEIGHT = 2000;
+            const containerWidth = messagesContainer.offsetWidth;
             const msgs = Array.from(messagesContainer.querySelectorAll('.message'));
             
-            // 1. Замеряем точные координаты до любых изменений
-            const positions = msgs.map(msg => {
-                const rect = msg.getBoundingClientRect();
-                return {
-                    el: msg,
-                    top: rect.top - containerRect.top + messagesContainer.scrollTop, // Абсолютная высота
-                    left: rect.left - containerRect.left,
-                    width: rect.width,
-                    height: rect.height
-                };
-            });
+            messagesContainer.style.height = `${WORLD_HEIGHT}px`;
+            platforms = [];
 
-            // 2. Вычисляем высоту игрового мира (высшая точка + место для прыжков)
-            let maxY = 0;
-            positions.forEach(p => maxY = Math.max(maxY, p.top + p.height));
-            const gameWorldHeight = Math.max(maxY + 1000, containerRect.height); 
-
-            // 3. Фиксируем сообщения на их местах
-            positions.forEach(p => {
-                p.el.style.position = 'absolute';
-                p.el.style.top = `${p.top}px`;
-                p.el.style.left = `${p.left}px`; // Пока оставляем на месте
-                p.el.style.width = `${p.width}px`; 
-                p.el.style.margin = '0';
-            });
-
-            // 4. Растягиваем контейнер
-            messagesContainer.style.height = `${gameWorldHeight}px`;
-
-            // 5. Форсируем перерисовку и запускаем плавный разлет в стороны
-            void messagesContainer.offsetWidth;
-            
-            platforms = positions.map(p => {
-                // Рандомная позиция по X, чтобы не вылезала за края
-                const randomLeft = Math.random() * (containerRect.width - p.width - 20) + 10; 
-                p.el.style.left = `${randomLeft}px`;
+            // Раскидываем сообщения по всей высоте случайным образом
+            msgs.forEach((msg, index) => {
+                // Высота платформы от 150 до 1800 (чтобы не на самом верху и не на самом дне)
+                const randomTop = 200 + (index * 150) + Math.random() * 100; 
+                const randomLeft = Math.random() * (containerWidth - msg.offsetWidth - 20) + 10;
                 
-                return {
-                    el: p.el,
+                msg.style.position = 'absolute';
+                msg.style.top = `${WORLD_HEIGHT - randomTop}px`; 
+                msg.style.left = `${randomLeft}px`;
+                msg.style.margin = '0';
+                msg.style.width = `${msg.offsetWidth}px`;
+
+                // Сохраняем для физики (Y считаем от нижнего края!)
+                platforms.push({
+                    el: msg,
                     x: randomLeft,
-                    y: gameWorldHeight - p.top - p.height, // Координата Y от нижнего края мира
-                    width: p.width,
-                    height: p.height
-                };
+                    y: randomTop, // Высота от низа
+                    width: msg.offsetWidth,
+                    height: msg.offsetHeight
+                });
             });
 
-            // 6. Настройка лягушки (начинает со дна мира)
             frok.style.display = 'block';
-            frokPhysics.x = (containerRect.width / 2) - 25;
-            frokPhysics.y = 50; // 50px от нижнего края
+            frokPhysics.x = (containerWidth / 2) - 25;
+            frokPhysics.y = 100; // Лягушка появляется на высоте 100px от низа
             frokPhysics.vx = 0;
             frokPhysics.vy = 0;
             frokPhysics.rotation = 0;
+
+            // МГНОВЕННО скроллим вниз, к лягушке
+            messagesContainer.scrollTop = WORLD_HEIGHT - messagesContainer.clientHeight;
 
             cancelAnimationFrame(gameLoopId);
             gameLoop();
@@ -584,7 +567,6 @@
             platforms = [];
             messagesContainer.scrollTop = messagesContainer.scrollHeight; 
         }
-
         function handleKeyDown(e) {
             if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') keys.left = true;
             if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D' || e.key === 'в' || e.key === 'В') keys.right = true;
@@ -601,9 +583,9 @@
         function gameLoop() {
             if (!isGameActive || !frok) return;
 
-            const containerHeight = messagesContainer.offsetHeight; // Высота игрового мира
-            const containerWidth = messagesContainer.offsetWidth;
+            const WORLD_HEIGHT = 2000;
             const frokSize = 50;
+            const containerWidth = messagesContainer.offsetWidth;
 
             // Управление
             if (keys.left) frokPhysics.vx -= 1.5;
@@ -624,13 +606,11 @@
             if (frokPhysics.x > containerWidth - frokSize) { frokPhysics.x = containerWidth - frokSize; frokPhysics.vx = 0; }
 
             // --- КОЛЛИЗИИ ---
-            if (frokPhysics.vy <= 0) { // Проверяем только когда падаем
+            if (frokPhysics.vy < 0) { // Проверяем только когда падаем
                 platforms.forEach(p => {
-                    const pTop = p.y + p.height; 
-                    
-                    // Если нижняя часть лягушки пересекает верх платформы
-                    if (frokPhysics.y >= pTop && frokPhysics.y <= pTop + 20) {
-                        // Проверка на пересечение по X
+                    // Если ноги лягушки пересекают высоту платформы
+                    if (frokPhysics.y >= p.y && frokPhysics.y <= p.y + 20) {
+                        // И если по X они пересекаются
                         if (frokPhysics.x + frokSize > p.x && frokPhysics.x < p.x + p.width) {
                             frokPhysics.vy = frokPhysics.jumpPower; 
                         }
@@ -638,9 +618,9 @@
                 });
             }
 
-            // Если упал ниже видимости - респавн наверх (опционально)
-            if (frokPhysics.y < 0) {
-                frokPhysics.y = containerHeight - 100;
+            // Если упал ниже низа, возрождаем наверху
+            if (frokPhysics.y < -50) {
+                frokPhysics.y = WORLD_HEIGHT - 100;
                 frokPhysics.vy = 0;
             }
 
@@ -654,11 +634,11 @@
             frok.style.transform = `rotate(${frokPhysics.rotation}deg)`;
 
             // --- КАМЕРА ---
-            // Нам нужно, чтобы лягушка была по центру экрана.
-            // Вычисляем нужный scrollTop.
-            const targetScroll = (containerHeight - frokPhysics.y - frokSize) - (messagesContainer.clientHeight / 2);
+            // Нам нужно, чтобы лягушка всегда была в центре экрана по вертикали
+            // Вычисляем, какой scrollTop нужен
+            const targetScroll = (WORLD_HEIGHT - frokPhysics.y) - (messagesContainer.clientHeight / 2) + 25;
             
-            // Плавный скролл (можно сделать резким, если убрать этот блок и просто присвоить scrollTop)
+            // Применяем скролл (можно добавить плавность, если вместо = использовать += и делить разницу)
             messagesContainer.scrollTop = targetScroll;
 
             gameLoopId = requestAnimationFrame(gameLoop);
