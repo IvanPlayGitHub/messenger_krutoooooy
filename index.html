@@ -1005,12 +1005,16 @@
             // Меняем иконку на часики, показывая загрузку
             uploadImageBtn.textContent = '⏳';
 
-            const fileExt = file.name.split('.').pop();
+            const fileExt = file.name.split('.').pop().toLowerCase();
             const fileName = `${Date.now()}.${fileExt}`;
-            // Создаем папку с ID чата (чтобы файлы не путались)
-            const filePath = `${activeChatId}/${fileName}`; 
+            
+            // Вот эта строчка всё исправит: она заменяет все русские буквы и пробелы на "_"
+            const safeChatId = activeChatId.replace(/[^a-zA-Z0-9_-]/g, '_'); 
+            
+            // Используем безопасный ID для папки
+            const filePath = `${safeChatId}/${fileName}`; 
 
-            // 1. Загружаем в хранилище Supabase
+            // Дальше идет загрузка (она не меняется)
             const { error } = await supabaseClient.storage
                 .from('chat-images')
                 .upload(filePath, file);
