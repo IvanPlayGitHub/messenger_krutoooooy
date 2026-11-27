@@ -205,7 +205,7 @@
 <body>
 
     <!-- Версия сайта -->
-    <div class="site-version">v0.0.3</div>
+    <div class="site-version">v0.0.4</div>
 
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div class="custom-tooltip" id="tooltip"></div>
@@ -422,7 +422,7 @@
             const msgRect = msg.getBoundingClientRect();
             return {
                 el: msg,
-                //top: msgRect.top - containerRect.top + messagesContainer.scrollTop,
+                top: msgRect.top - containerRect.top + messagesContainer.scrollTop,
                 randomLeft: 5 + Math.random() * 65
             };
         });
