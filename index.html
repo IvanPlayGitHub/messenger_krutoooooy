@@ -251,7 +251,7 @@
     </div>
 
     <!-- Версия сайта -->
-    <div class="site-version">v0.0.7</div>
+    <div class="site-version">v0.0.8</div>
 
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div class="custom-tooltip" id="tooltip"></div>
@@ -485,46 +485,59 @@
             messagesContainer.classList.add('game-active');
             logoPopcorn.classList.add('show'); 
             
-            // Временно отключаем прокрутку, чтобы точно замерить позиции
-            messagesContainer.style.overflowY = 'hidden';
-            
+            const containerRect = messagesContainer.getBoundingClientRect();
             const msgs = Array.from(messagesContainer.querySelectorAll('.message'));
-            platforms = [];
             
-            // Запоминаем позиции ДО изменений
+            // 1. Замеряем точные координаты до любых изменений
             const positions = msgs.map(msg => {
+                const rect = msg.getBoundingClientRect();
                 return {
                     el: msg,
-                    top: msg.offsetTop,
-                    left: msg.offsetLeft,
-                    width: msg.offsetWidth,
-                    height: msg.offsetHeight
+                    top: rect.top - containerRect.top + messagesContainer.scrollTop, // Абсолютная высота
+                    left: rect.left - containerRect.left,
+                    width: rect.width,
+                    height: rect.height
                 };
             });
 
-            // Растягиваем контейнер для игры (создаем "игровой мир")
-            messagesContainer.style.height = '2000px';
+            // 2. Вычисляем высоту игрового мира (высшая точка + место для прыжков)
+            let maxY = 0;
+            positions.forEach(p => maxY = Math.max(maxY, p.top + p.height));
+            const gameWorldHeight = Math.max(maxY + 1000, containerRect.height); 
 
-            // Применяем жесткие координаты
-            positions.forEach((p) => {
+            // 3. Фиксируем сообщения на их местах
+            positions.forEach(p => {
                 p.el.style.position = 'absolute';
                 p.el.style.top = `${p.top}px`;
-                p.el.style.left = `${p.left}px`;
+                p.el.style.left = `${p.left}px`; // Пока оставляем на месте
+                p.el.style.width = `${p.width}px`; 
                 p.el.style.margin = '0';
-                
-                platforms.push(p);
             });
 
-            // Включаем прокрутку обратно
-            messagesContainer.style.overflowY = 'auto';
+            // 4. Растягиваем контейнер
+            messagesContainer.style.height = `${gameWorldHeight}px`;
 
-            // Настройки лягушки (координаты от нижней границы 2000px)
-            frok.style.display = 'block';
-            frok.style.left = '50%';
+            // 5. Форсируем перерисовку и запускаем плавный разлет в стороны
+            void messagesContainer.offsetWidth;
             
-            // Ставим лягушку на самое нижнее сообщение или на дно
-            frokPhysics.y = 50; 
-            frokPhysics.x = (messagesContainer.offsetWidth / 2) - 25;
+            platforms = positions.map(p => {
+                // Рандомная позиция по X, чтобы не вылезала за края
+                const randomLeft = Math.random() * (containerRect.width - p.width - 20) + 10; 
+                p.el.style.left = `${randomLeft}px`;
+                
+                return {
+                    el: p.el,
+                    x: randomLeft,
+                    y: gameWorldHeight - p.top - p.height, // Координата Y от нижнего края мира
+                    width: p.width,
+                    height: p.height
+                };
+            });
+
+            // 6. Настройка лягушки (начинает со дна мира)
+            frok.style.display = 'block';
+            frokPhysics.x = (containerRect.width / 2) - 25;
+            frokPhysics.y = 50; // 50px от нижнего края
             frokPhysics.vx = 0;
             frokPhysics.vy = 0;
             frokPhysics.rotation = 0;
@@ -553,13 +566,14 @@
             cancelAnimationFrame(gameLoopId);
             if (frok) frok.style.display = 'none';
             
-            // Возвращаем всё на место
             messagesContainer.style.height = ''; 
+            
             const msgs = messagesContainer.querySelectorAll('.message');
             msgs.forEach(msg => {
                 msg.style.position = '';
                 msg.style.top = '';
                 msg.style.left = '';
+                msg.style.width = '';
                 msg.style.margin = '';
             });
 
@@ -587,9 +601,9 @@
         function gameLoop() {
             if (!isGameActive || !frok) return;
 
-            const containerHeight = 2000; // Наш игровой мир
-            const frokSize = 50;
+            const containerHeight = messagesContainer.offsetHeight; // Высота игрового мира
             const containerWidth = messagesContainer.offsetWidth;
+            const frokSize = 50;
 
             // Управление
             if (keys.left) frokPhysics.vx -= 1.5;
@@ -609,32 +623,25 @@
             if (frokPhysics.x < 0) { frokPhysics.x = 0; frokPhysics.vx = 0; }
             if (frokPhysics.x > containerWidth - frokSize) { frokPhysics.x = containerWidth - frokSize; frokPhysics.vx = 0; }
 
-            // Координаты лягушки в системе "сверху вниз"
-            const frokTop = containerHeight - frokPhysics.y - frokSize;
-            const frokBottom = containerHeight - frokPhysics.y;
-
-            // Коллизии (проверяем только если падаем вниз, т.е. vy < 0)
-            if (frokPhysics.vy < 0) {
+            // --- КОЛЛИЗИИ ---
+            if (frokPhysics.vy <= 0) { // Проверяем только когда падаем
                 platforms.forEach(p => {
-                    const pTop = p.top;
-                    const pBottom = p.top + p.height;
-                    const pLeft = p.left;
-                    const pRight = p.left + p.width;
-
-                    // Пересечение по X и касание по Y
-                    if (frokPhysics.x + frokSize > pLeft && frokPhysics.x < pRight) {
-                        // Если ноги лягушки находятся в пределах верхней части платформы
-                        if (frokBottom >= pTop && frokBottom <= pTop + 20) {
-                            frokPhysics.vy = frokPhysics.jumpPower;
+                    const pTop = p.y + p.height; 
+                    
+                    // Если нижняя часть лягушки пересекает верх платформы
+                    if (frokPhysics.y >= pTop && frokPhysics.y <= pTop + 20) {
+                        // Проверка на пересечение по X
+                        if (frokPhysics.x + frokSize > p.x && frokPhysics.x < p.x + p.width) {
+                            frokPhysics.vy = frokPhysics.jumpPower; 
                         }
                     }
                 });
             }
 
-            // Если упал ниже экрана - респавн
+            // Если упал ниже видимости - респавн наверх (опционально)
             if (frokPhysics.y < 0) {
-                frokPhysics.y = 200;
-                frokPhysics.vy = 15;
+                frokPhysics.y = containerHeight - 100;
+                frokPhysics.vy = 0;
             }
 
             // Сальтуха
@@ -647,11 +654,11 @@
             frok.style.transform = `rotate(${frokPhysics.rotation}deg)`;
 
             // --- КАМЕРА ---
-            // Нам нужно, чтобы лягушка была примерно по центру экрана.
-            // Для этого вычисляем, какой scrollTop должен быть.
-            const targetScroll = (containerHeight - frokPhysics.y) - (messagesContainer.clientHeight / 2);
+            // Нам нужно, чтобы лягушка была по центру экрана.
+            // Вычисляем нужный scrollTop.
+            const targetScroll = (containerHeight - frokPhysics.y - frokSize) - (messagesContainer.clientHeight / 2);
             
-            // Плавно скроллим к цели
+            // Плавный скролл (можно сделать резким, если убрать этот блок и просто присвоить scrollTop)
             messagesContainer.scrollTop = targetScroll;
 
             gameLoopId = requestAnimationFrame(gameLoop);
