@@ -118,7 +118,7 @@
             z-index: 2;
         }
 
-        @keyframes slideInMessage { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(20) scale(1); } }
+        @keyframes slideInMessage { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         .message { max-width: 70%; padding: 10px 15px; border: 2px solid black; border-radius: 15px; font-size: 16px; background: white; align-self: flex-start; display: flex; flex-direction: column; word-break: break-word; transition: background 0.3s, border-color 0.3s, color 0.3s; animation: slideInMessage 0.3s var(--ease-out) forwards; }
         .message.own { align-self: flex-end; background: #e0f7fa; }
         .message-sender { font-size: 12px; font-weight: bold; color: #666; margin-bottom: 3px; }
