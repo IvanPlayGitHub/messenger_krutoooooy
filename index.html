@@ -322,10 +322,16 @@
             </div>
 
             <div class="input-area" id="inputArea" style="display: none;">
+            <!-- Блок превью прикрепленного файла -->
+            <div class="attachment-preview" id="attachmentPreview">
+                <span class="attachment-name" id="attachmentName">file.png</span>
+                <span class="remove-attachment" id="removeAttachmentBtn">✕</span>
+            </div>
+
+            <div class="input-area" id="inputArea" style="display: none; flex-wrap: wrap;">
+                <input type="file" id="fileInput" style="display: none;">
+                <button id="uploadFileBtn" title="Прикрепить файл">📎</button>
                 <input type="text" id="messageInput" placeholder="Написать сообщение..." autocomplete="off">
-                <button id="gameBtn" title="Режим Doodle Jump">🎮</button>
-                <input type="file" id="imageInput" accept="image/*" style="display: none;">
-                <button id="uploadImageBtn" title="Отправить картинку">📷</button>
                 <button id="sendBtn">></button>
             </div>
         </main>
