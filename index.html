@@ -919,16 +919,24 @@
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${msg.username === usernameInput.value.trim() ? 'own' : ''}`;
             
-            // Проверяем: если текст начинается с [img] и заканчивается [/img], значит это картинка
-            let contentHTML = '';
-            if (msg.text.startsWith('[img]') && msg.text.endsWith('[/img]')) {
-                const imgUrl = msg.text.substring(5, msg.text.length - 6);
-                contentHTML = `<img src="${imgUrl}" alt="Картинка" loading="lazy">`;
-            } else {
-                contentHTML = `<div>${msg.text}</div>`;
-            }
+            const senderDiv = document.createElement('div');
+            senderDiv.className = 'message-sender';
+            senderDiv.textContent = msg.username;
+            
+            const contentDiv = document.createElement('div');
+            
+            // Защита от XSS (чтобы нельзя было взломать через HTML-теги)
+            let safeText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            
+            // Ищем тег [img] и заменяем его на настоящую картинку с новой строки
+            let finalHTML = safeText.replace(/\[img\](.*?)\[\/img\]/g, (match, url) => {
+                return `<br><img src="${url}" alt="Картинка" loading="lazy">`;
+            });
 
-            msgDiv.innerHTML = `<div class="message-sender">${msg.username}</div>${contentHTML}`;
+            contentDiv.innerHTML = finalHTML;
+
+            msgDiv.appendChild(senderDiv);
+            msgDiv.appendChild(contentDiv);
             messagesContainer.appendChild(msgDiv);
         }
 
@@ -998,26 +1006,21 @@
 
         uploadImageBtn.addEventListener('click', () => imageInput.click());
 
-        imageInput.addEventListener('change', async (e) => {
+                imageInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file || activeChatId === null) return;
 
-            // Меняем иконку на часики, показывая загрузку
             uploadImageBtn.textContent = '⏳';
+            
+            // Запоминаем текст, который уже напечатан в поле ввода
+            const textValue = messageInput.value.trim(); 
 
             const fileExt = file.name.split('.').pop().toLowerCase();
             const fileName = `${Date.now()}.${fileExt}`;
-            
-            // Вот эта строчка всё исправит: она заменяет все русские буквы и пробелы на "_"
             const safeChatId = activeChatId.replace(/[^a-zA-Z0-9_-]/g, '_'); 
-            
-            // Используем безопасный ID для папки
             const filePath = `${safeChatId}/${fileName}`; 
 
-            // Дальше идет загрузка (она не меняется)
-            const { error } = await supabaseClient.storage
-                .from('chat-images')
-                .upload(filePath, file);
+            const { error } = await supabaseClient.storage.from('chat-images').upload(filePath, file);
 
             if (error) {
                 alert('Ошибка загрузки: ' + error.message);
@@ -1025,22 +1028,24 @@
                 return;
             }
 
-            // 2. Получаем публичную ссылку
-            const { data: urlData } = supabaseClient.storage
-                .from('chat-images')
-                .getPublicUrl(filePath);
+            const { data: urlData } = supabaseClient.storage.from('chat-images').getPublicUrl(filePath);
 
-            // 3. Отправляем специальное текстовое сообщение со ссылкой
+            // Если текст был, приклеиваем картинку к нему. Если нет - отправляем только картинку.
+            const finalText = textValue 
+                ? `${textValue} [img]${urlData.publicUrl}[/img]` 
+                : `[img]${urlData.publicUrl}[/img]`;
+
             let currentName = usernameInput.value.trim() || generateRandomUsername();
+            
             await supabaseClient.from('messages').insert({ 
                 chat_id: activeChatId.toString(), 
                 username: currentName, 
-                text: `[img]${urlData.publicUrl}[/img]` 
+                text: finalText
             });
 
-            // Возвращаем кнопку в исходное состояние
             uploadImageBtn.textContent = '📷';
-            imageInput.value = ''; // Очищаем инпут
+            imageInput.value = '';
+            messageInput.value = ''; // Очищаем поле ввода после отправки
         });
 
         async function sendMessage() {
