@@ -251,7 +251,15 @@
             display: block;
         }
         body.dark-mode .message img { border-color: white; }
-
+                /* Превью прикрепленного файла */
+        .attachment-preview {
+            display: none; padding: 10px; background: #e0f7fa; border: 3px solid black; border-radius: 10px;
+            margin: 0 10px 5px 10px; align-items: center; justify-content: space-between;
+        }
+        body.dark-mode .attachment-preview { background: #004d40; border-color: white; }
+        .attachment-name { font-weight: bold; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%; }
+        .remove-attachment { cursor: pointer; color: red; font-weight: bold; font-size: 18px; padding: 0 5px; }
+        
     </style>
 </head>
 <body>
