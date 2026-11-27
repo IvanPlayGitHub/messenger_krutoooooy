@@ -38,7 +38,7 @@
         body.dark-mode .site-version { background: #1a1a1a; color: white; border-color: white; box-shadow: 0 2px 0 white; }
         /* --- ЛОГОТИП --- */
         .logo-container {
-            position: fixed; top: 15px; right: 15px; width: 70px; height: 70px;
+            position: fixed; top: 15px; left: 15px; width: 90px; height: 90px; /* Перенесли влево и увеличили */
             z-index: 10005; cursor: pointer; user-select: none;
         }
         .logo-base {
@@ -48,14 +48,14 @@
         .logo-container:active .logo-base { transform: scale(0.9); }
         
         .logo-popcorn {
-            position: absolute; bottom: -10px; right: -10px; width: 35px; height: 35px;
+            position: absolute; bottom: -10px; right: -10px; width: 40px; height: 40px;
             opacity: 0; transform: scale(0) translateY(10px);
             transition: all 0.4s var(--ease-bounce); pointer-events: none;
         }
         .logo-popcorn.show { opacity: 1; transform: scale(1) translateY(0); }
 
         .logo-dance-hand {
-            position: absolute; top: 50%; left: -30px; width: 35px; height: 35px;
+            position: absolute; top: 50%; left: -15px; width: 45px; height: 45px; /* Рука ближе */
             opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
         }
         .logo-dance-hand.show { opacity: 1; animation: handTaunt 0.5s infinite alternate; }
@@ -450,29 +450,21 @@
         const logoPopcorn = document.getElementById('logoPopcorn');
         const logoHand = document.getElementById('logoHand');
         let isLogoPatted = false;
-
-        logoContainer.addEventListener('click', () => {
-            if (isLogoPatted) return;
-            isLogoPatted = true;
-            logoImg.src = 'logo_assets/logo_pat.gif';
-            logoContainer.classList.add('logo-wobble');
-            
-            setTimeout(() => {
-                logoContainer.classList.remove('logo-wobble');
-                if (!document.hasFocus() && !isGameActive) logoImg.src = 'logo_assets/logo_dance.gif';
-                else if (!isGameActive) logoImg.src = 'logo_assets/logo_idle.gif';
-                isLogoPatted = false;
-            }, 1500); 
-        });
+        
+        let blurTimeout;
 
         window.addEventListener('blur', () => {
-            if (!isGameActive && !isLogoPatted) {
-                logoImg.src = 'logo_assets/logo_dance.gif';
-                logoHand.classList.add('show');
-            }
+            // Ждем 1.5 секунды, прежде чем начать дразнить
+            blurTimeout = setTimeout(() => {
+                if (!isGameActive && !isLogoPatted && !document.hasFocus()) {
+                    logoImg.src = 'logo_assets/logo_dance.gif';
+                    logoHand.classList.add('show');
+                }
+            }, 1500);
         });
 
         window.addEventListener('focus', () => {
+            clearTimeout(blurTimeout); // Отменяем таймер, если вернулись быстро
             logoHand.classList.remove('show');
             if (!isLogoPatted && !isGameActive) logoImg.src = 'logo_assets/logo_idle.gif';
         });
@@ -482,7 +474,6 @@
                 DeviceOrientationEvent.requestPermission().catch(console.error);
             }, { once: true });
         }
-
         function startGame() {
             if (!activeChatId || messagesContainer.querySelectorAll('.message').length === 0) {
                 alert("Сначала отправьте хотя бы одно сообщение, чтобы было по чему прыгать!");
@@ -492,29 +483,35 @@
             isGameActive = true;
             gameBtn.classList.add('active');
             messagesContainer.classList.add('game-active');
-            logoPopcorn.classList.add('show'); // Включаем попкорн
+            logoPopcorn.classList.add('show'); 
             
             const containerRect = messagesContainer.getBoundingClientRect();
             const msgs = Array.from(messagesContainer.querySelectorAll('.message'));
             platforms = [];
             
+            // 1. Запоминаем точную высоту (Y) до изменений
             const positions = msgs.map(msg => {
-                const msgRect = msg.getBoundingClientRect();
                 return {
                     el: msg,
-                    top: msgRect.top - containerRect.top + messagesContainer.scrollTop,
-                    randomLeft: 5 + Math.random() * 65
+                    top: msg.offsetTop, // offsetTop идеально берет высоту с учетом gap
+                    randomLeftPx: 20 + Math.random() * (containerRect.width - 200) // Рандом в пикселях
                 };
             });
 
-            positions.forEach(({ el, top, randomLeft }) => {
+            // 2. Применяем absolute, фиксируем Y, и СБРАСЫВАЕМ X в 0
+            positions.forEach(({ el, top }) => {
                 el.style.position = 'absolute';
                 el.style.top = `${top}px`;
-                // Даем 1 кадр, чтобы `top` применился без анимации
-                requestAnimationFrame(() => {
-                    el.style.left = `${randomLeft}%`;
-                });
-                
+                el.style.left = '0px';
+                el.style.margin = '0'; // Убираем влияние флекс-отступов
+            });
+
+            // 3. Форсируем перерисовку браузера (чтобы left: 0 точно применился)
+            void messagesContainer.offsetWidth;
+
+            // 4. Запускаем плавное движение вбок
+            positions.forEach(({ el, top, randomLeftPx }) => {
+                el.style.left = `${randomLeftPx}px`;
                 platforms.push({ el: el, top: top, left: 0, right: 0 });
             });
 
