@@ -405,53 +405,59 @@
         function startGame() {
             if (!activeChatId || messagesContainer.querySelectorAll('.message').length === 0) {
                 alert("Сначала отправьте хотя бы одно сообщение, чтобы было по чему прыгать!");
-                return;
+            return;
             }
 
-            isGameActive = true;
-            gameBtn.classList.add('active');
-            messagesContainer.classList.add('game-active');
-            
-            const containerRect = messagesContainer.getBoundingClientRect();
-            const msgs = messagesContainer.querySelectorAll('.message');
-            
-            platforms = [];
-            
-            msgs.forEach(msg => {
-                const msgRect = msg.getBoundingClientRect();
-                const topOffset = msgRect.top - containerRect.top + messagesContainer.scrollTop;
-                
-                msg.style.position = 'absolute';
-                msg.style.top = `${topOffset}px`;
-                
-                const randomLeft = 5 + Math.random() * 65; 
-                msg.style.left = `${randomLeft}%`;
-                
-                platforms.push({
-                    el: msg,
-                    top: topOffset,
-                    left: 0, right: 0
-                });
+        isGameActive = true;
+        gameBtn.classList.add('active');
+        messagesContainer.classList.add('game-active');
+    
+        const containerRect = messagesContainer.getBoundingClientRect();
+        const msgs = Array.from(messagesContainer.querySelectorAll('.message'));
+    
+    // 1. Сначала собираем ВСЕ позиции, пока сообщения ещё в потоке
+        const positions = msgs.map(msg => {
+            const msgRect = msg.getBoundingClientRect();
+            return {
+                el: msg,
+                top: msgRect.top - containerRect.top + messagesContainer.scrollTop,
+                randomLeft: 5 + Math.random() * 65
+            };
+        });
+    
+        platforms = [];
+
+        // 2. Только потом применяем absolute и координаты
+        positions.forEach(({ el, top, randomLeft }) => {
+            el.style.position = 'absolute';
+            el.style.top = `${top}px`;
+            el.style.left = `${randomLeft}%`;
+        
+            platforms.push({
+                el: el,
+                top: top,
+                left: 0,
+                right: 0
             });
+        });
 
-            frok.style.display = 'block';
-            frok.style.left = '50%';
-            frok.style.transform = 'translateX(-50%)';
-            frok.style.bottom = '0px'; 
-            
-            frokPhysics.x = (containerRect.width / 2) - 25;
-            frokPhysics.y = 0; 
-            frokPhysics.vx = 0;
-            frokPhysics.vy = 0;
+        frok.style.display = 'block';
+        frok.style.left = '50%';
+        frok.style.transform = 'translateX(-50%)';
+        frok.style.bottom = '0px'; 
+    
+        frokPhysics.x = (containerRect.width / 2) - 25;
+        frokPhysics.y = 0; 
+        frokPhysics.vx = 0;
+        frokPhysics.vy = 0;
 
-            cancelAnimationFrame(gameLoopId);
-            gameLoop();
-
-            document.addEventListener('keydown', handleKeyDown);
-            document.addEventListener('keyup', handleKeyUp);
-            window.addEventListener('deviceorientation', handleTilt);
-        }
-
+        cancelAnimationFrame(gameLoopId);
+        gameLoop();
+    
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+        window.addEventListener('deviceorientation', handleTilt);
+    }
         function stopGame() {
             if (!isGameActive) return;
             isGameActive = false;
