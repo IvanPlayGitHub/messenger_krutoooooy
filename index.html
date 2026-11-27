@@ -240,6 +240,18 @@
             .sidebar-overlay.active { opacity: 1; visibility: visible; } 
             .participant-avatar, .participant-more { width: 28px; height: 28px; font-size: 12px; border-width: 2px; }
         }
+
+        /* Стили для картинок в сообщениях */
+        .message img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 5px;
+            border: 2px solid black;
+            cursor: pointer;
+            display: block;
+        }
+        body.dark-mode .message img { border-color: white; }
+
     </style>
 </head>
 <body>
@@ -304,6 +316,8 @@
             <div class="input-area" id="inputArea" style="display: none;">
                 <input type="text" id="messageInput" placeholder="Написать сообщение..." autocomplete="off">
                 <button id="gameBtn" title="Режим Doodle Jump">🎮</button>
+                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                <button id="uploadImageBtn" title="Отправить картинку">📷</button>
                 <button id="sendBtn">></button>
             </div>
         </main>
@@ -901,11 +915,20 @@
                 participantsContainer.appendChild(more);
             }
         }
-
         function appendMessageToDOM(msg) {
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${msg.username === usernameInput.value.trim() ? 'own' : ''}`;
-            msgDiv.innerHTML = `<div class="message-sender">${msg.username}</div><div>${msg.text}</div>`;
+            
+            // Проверяем: если текст начинается с [img] и заканчивается [/img], значит это картинка
+            let contentHTML = '';
+            if (msg.text.startsWith('[img]') && msg.text.endsWith('[/img]')) {
+                const imgUrl = msg.text.substring(5, msg.text.length - 6);
+                contentHTML = `<img src="${imgUrl}" alt="Картинка" loading="lazy">`;
+            } else {
+                contentHTML = `<div>${msg.text}</div>`;
+            }
+
+            msgDiv.innerHTML = `<div class="message-sender">${msg.username}</div>${contentHTML}`;
             messagesContainer.appendChild(msgDiv);
         }
 
@@ -969,6 +992,52 @@
                     }
                 }).subscribe();
         }
+        // --- ЗАГРУЗКА КАРТИНОК ---
+        const imageInput = document.getElementById('imageInput');
+        const uploadImageBtn = document.getElementById('uploadImageBtn');
+
+        uploadImageBtn.addEventListener('click', () => imageInput.click());
+
+        imageInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || activeChatId === null) return;
+
+            // Меняем иконку на часики, показывая загрузку
+            uploadImageBtn.textContent = '⏳';
+
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}.${fileExt}`;
+            // Создаем папку с ID чата (чтобы файлы не путались)
+            const filePath = `${activeChatId}/${fileName}`; 
+
+            // 1. Загружаем в хранилище Supabase
+            const { error } = await supabaseClient.storage
+                .from('chat-images')
+                .upload(filePath, file);
+
+            if (error) {
+                alert('Ошибка загрузки: ' + error.message);
+                uploadImageBtn.textContent = '📷';
+                return;
+            }
+
+            // 2. Получаем публичную ссылку
+            const { data: urlData } = supabaseClient.storage
+                .from('chat-images')
+                .getPublicUrl(filePath);
+
+            // 3. Отправляем специальное текстовое сообщение со ссылкой
+            let currentName = usernameInput.value.trim() || generateRandomUsername();
+            await supabaseClient.from('messages').insert({ 
+                chat_id: activeChatId.toString(), 
+                username: currentName, 
+                text: `[img]${urlData.publicUrl}[/img]` 
+            });
+
+            // Возвращаем кнопку в исходное состояние
+            uploadImageBtn.textContent = '📷';
+            imageInput.value = ''; // Очищаем инпут
+        });
 
         async function sendMessage() {
             const text = messageInput.value.trim();
