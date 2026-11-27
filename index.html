@@ -939,12 +939,17 @@
             
             const contentDiv = document.createElement('div');
             
-            // Защита от XSS (чтобы нельзя было взломать через HTML-теги)
+            // Защита от XSS
             let safeText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
             
-            // Ищем тег [img] и заменяем его на настоящую картинку с новой строки
+            // Парсим картинки
             let finalHTML = safeText.replace(/\[img\](.*?)\[\/img\]/g, (match, url) => {
                 return `<br><img src="${url}" alt="Картинка" loading="lazy">`;
+            });
+
+            // Парсим остальные файлы
+            finalHTML = finalHTML.replace(/\[file name="(.*?)"\](.*?)\[\/file\]/g, (match, fileName, url) => {
+                return `<br><a href="${url}" target="_blank" style="display:inline-block; padding:8px 12px; border:3px solid black; border-radius:10px; text-decoration:none; color:black; background:white; font-weight:bold; margin-top:5px;">📎 Скачать ${fileName}</a>`;
             });
 
             contentDiv.innerHTML = finalHTML;
@@ -1014,21 +1019,51 @@
                     }
                 }).subscribe();
         }
-        // --- ЗАГРУЗКА КАРТИНОК ---
-        const imageInput = document.getElementById('imageInput');
-        const uploadImageBtn = document.getElementById('uploadImageBtn');
+        // --- ЛОГИКА ПРИКРЕПЛЕНИЯ ФАЙЛОВ ---
+        const fileInput = document.getElementById('fileInput');
+        const uploadFileBtn = document.getElementById('uploadFileBtn');
+        const attachmentPreview = document.getElementById('attachmentPreview');
+        const attachmentName = document.getElementById('attachmentName');
+        const removeAttachmentBtn = document.getElementById('removeAttachmentBtn');
+        
+        let attachedFile = null; // Тут храним файл до отправки
 
-        uploadImageBtn.addEventListener('click', () => imageInput.click());
+        // Выбор файла через кнопку
+        uploadFileBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFileSelect(e.target.files[0]));
 
-                imageInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file || activeChatId === null) return;
+        // Drag and Drop (перетаскивание)
+        document.addEventListener('dragover', (e) => e.preventDefault()); // Отключаем открытие файла в браузере
+        messagesContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (!activeChatId) return;
+            if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files[0]);
+        });
 
-            uploadImageBtn.textContent = '⏳';
-            
-            // Запоминаем текст, который уже напечатан в поле ввода
-            const textValue = messageInput.value.trim(); 
+        // Вставка из буфера обмена (Ctrl+V)
+        document.addEventListener('paste', (e) => {
+            if (!activeChatId || !e.clipboardData || !e.clipboardData.files.length) return;
+            e.preventDefault();
+            handleFileSelect(e.clipboardData.files[0]);
+        });
 
+        // Функция обработки выбранного файла
+        function handleFileSelect(file) {
+            if (!file) return;
+            attachedFile = file;
+            attachmentName.textContent = file.name;
+            attachmentPreview.style.display = 'flex';
+            messageInput.focus(); // Ставим курсор в поле ввода, чтобы дописать текст
+        }
+
+        // Отмена прикрепления
+        removeAttachmentBtn.addEventListener('click', clearAttachment);
+
+        function clearAttachment() {
+            attachedFile = null;
+            fileInput.value = '';
+            attachmentPreview.style.display = 'none';
+        }
             const fileExt = file.name.split('.').pop().toLowerCase();
             const fileName = `${Date.now()}.${fileExt}`;
             const safeChatId = activeChatId.replace(/[^a-zA-Z0-9_-]/g, '_'); 
@@ -1064,18 +1099,60 @@
 
         async function sendMessage() {
             const text = messageInput.value.trim();
-            if (text === '' || activeChatId === null || !supabaseClient) return;
+            // Отправляем, если есть текст ИЛИ прикреплен файл
+            if ((text === '' && !attachedFile) || activeChatId === null || !supabaseClient) return;
+
             let currentName = usernameInput.value.trim() || generateRandomUsername();
             usernameInput.value = currentName;
             localStorage.setItem('myChatName', currentName);
-            messageInput.value = '';
             
+            sendBtn.textContent = '⏳'; // Показываем загрузку
+            sendBtn.disabled = true;
+
+            let fileMarkup = '';
+
+            // Если файл прикреплен — загружаем его в облако
+            if (attachedFile) {
+                const fileExt = attachedFile.name.split('.').pop().toLowerCase() || 'file';
+                const fileName = `${Date.now()}.${fileExt}`;
+                const safeChatId = activeChatId.replace(/[^a-zA-Z0-9_-]/g, '_'); 
+                const filePath = `${safeChatId}/${fileName}`;
+
+                const { error: uploadError } = await supabaseClient.storage.from('chat-images').upload(filePath, attachedFile);
+                
+                if (uploadError) {
+                    alert('Ошибка загрузки файла: ' + uploadError.message);
+                    sendBtn.textContent = '>';
+                    sendBtn.disabled = false;
+                    return;
+                }
+
+                const { data: urlData } = supabaseClient.storage.from('chat-images').getPublicUrl(filePath);
+                
+                // Проверяем: если картинка — шлем как [img], если нет — как [file]
+                if (attachedFile.type.startsWith('image/')) {
+                    fileMarkup = ` [img]${urlData.publicUrl}[/img]`;
+                } else {
+                    fileMarkup = ` [file name="${attachedFile.name}"]${urlData.publicUrl}[/file]`;
+                }
+            }
+
+            // Склеиваем текст и файл
+            const finalText = (text + fileMarkup).trim();
+
             const { error } = await supabaseClient.from('messages').insert({ 
-                chat_id: activeChatId.toString(), username: currentName, text: text 
+                chat_id: activeChatId.toString(), username: currentName, text: finalText 
             });
+
+            sendBtn.textContent = '>';
+            sendBtn.disabled = false;
+
             if (error) {
                 console.error('Ошибка отправки:', error);
                 alert('Не удалось отправить сообщение.');
+            } else {
+                messageInput.value = ''; // Очищаем поле
+                clearAttachment();       // Очищаем прикрепленный файл
             }
         }
 
